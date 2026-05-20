@@ -981,12 +981,13 @@ html, body {
 
     /* 叙事区域占大部分屏幕 */
     .narrative-panel {
-        flex: 1;
-        min-height: 0;
+        flex: 1 1 auto;
+        min-height: 100px;
     }
     .narrative-content {
         padding: 8px 12px;
         max-height: none;
+        min-height: 100px;
     }
     .narrative-msg {
         padding: 8px 12px;
@@ -1008,21 +1009,27 @@ html, body {
         font-size: 12px;
     }
 
-    /* 按钮大一点方便触摸 */
+    /* 按钮区域换行排列 */
     .action-bar {
-        flex-wrap: nowrap;
+        flex-wrap: wrap;
         gap: 4px;
         padding: 6px 4px;
+        overflow-y: auto;
+        max-height: 100px;
     }
     .btn {
-        padding: 10px 8px;
-        font-size: 12px;
-        min-height: 44px;
-    }
-    .btn-sm {
         padding: 8px 6px;
         font-size: 11px;
-        min-height: 38px;
+        min-height: 36px;
+        flex: 1 0 auto;
+        max-width: 48%;
+    }
+    .btn-sm {
+        padding: 6px 4px;
+        font-size: 10px;
+        min-height: 32px;
+        flex: 1 0 auto;
+        max-width: 48%;
     }
 
     /* 模态框全屏 */
