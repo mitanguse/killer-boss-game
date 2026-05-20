@@ -187,6 +187,64 @@ def perform_action(req: ActRequest):
                 extra={"saves": saves},
             )
 
+        elif action == "weapon_shop":
+            weapons, narrative = engine.show_weapon_shop()
+            return StateResponse(
+                narrative=narrative,
+                state=engine.get_state(),
+                extra={"weapons": weapons},
+            )
+
+        elif action == "buy_weapon":
+            weapon_id = params.get("weapon_id")
+            if weapon_id is None:
+                return StateResponse(error="请选择要购买的武器。", state=engine.get_state())
+            narrative = engine.buy_weapon(weapon_id)
+            return StateResponse(
+                narrative=narrative,
+                state=engine.get_state(),
+            )
+
+        elif action == "equip_weapon":
+            hitman_id = params.get("hitman_id")
+            weapon_id = params.get("weapon_id")
+            if not hitman_id or not weapon_id:
+                return StateResponse(error="请选择杀手和武器。", state=engine.get_state())
+            narrative = engine.equip_weapon(hitman_id, weapon_id)
+            return StateResponse(
+                narrative=narrative,
+                state=engine.get_state(),
+            )
+
+        elif action == "unequip_weapon":
+            hitman_id = params.get("hitman_id")
+            if not hitman_id:
+                return StateResponse(error="请选择杀手。", state=engine.get_state())
+            narrative = engine.unequip_weapon(hitman_id)
+            return StateResponse(
+                narrative=narrative,
+                state=engine.get_state(),
+            )
+
+        elif action == "training":
+            options, narrative = engine.show_training()
+            return StateResponse(
+                narrative=narrative,
+                state=engine.get_state(),
+                extra={"training": options},
+            )
+
+        elif action == "do_training":
+            training_id = params.get("training_id")
+            hitman_id = params.get("hitman_id")
+            if not training_id or not hitman_id:
+                return StateResponse(error="请选择训练项目和杀手。", state=engine.get_state())
+            narrative = engine.do_training(training_id, hitman_id)
+            return StateResponse(
+                narrative=narrative,
+                state=engine.get_state(),
+            )
+
         elif action == "reset":
             engine.reset_game()
             return StateResponse(
