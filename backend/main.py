@@ -264,7 +264,25 @@ def perform_action(req: ActRequest):
                 state=engine.get_state(),
             )
 
+        elif action == "investigate":
+            hitman_id = params.get("hitman_id")
+            if not hitman_id:
+                return StateResponse(error="请选择要调查的杀手。", state=engine.get_state())
+            narrative = engine.investigate_mole(hitman_id)
+            return StateResponse(
+                narrative=narrative,
+                state=engine.get_state(),
+            )
+
+        elif action == "pickup":
+            narrative = engine.pickup_encounter()
+            return StateResponse(
+                narrative=narrative,
+                state=engine.get_state(),
+            )
+
         elif action == "reset":
+            engine.reset_game()
             engine.reset_game()
             return StateResponse(
                 narrative="游戏已重置。",
