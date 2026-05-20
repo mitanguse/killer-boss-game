@@ -381,7 +381,7 @@ class GameEngine:
         candidates = self._generate_recruit_candidates(3)
         self._action_context["candidates"] = candidates
         names = "、".join([c["name"] for c in candidates])
-        narrative = f"夜莺带来了三份档案：{names}。\n看看他们的资料吧。"
+        narrative = f"枭带来了三份档案：{names}。\n看看他们的资料吧。"
         return candidates, narrative
 
     def hire_candidate(self, candidate_index: int):
@@ -428,7 +428,7 @@ class GameEngine:
         available = [c for c in contracts if not c.get("taken")]
         if not available:
             return [], "老板，今天的契约板是空的……真少见。"
-        narrative = f"夜莺递来一份契约清单：\n"
+        narrative = f"枭递来一份契约清单：\n"
         narrative += f"当前有 {len(available)} 个可用契约，难度从简单到致命不等。"
         return available, narrative
 
@@ -613,7 +613,7 @@ class GameEngine:
             )
             text = response.choices[0].message.content.strip()
         except Exception as e:
-            text = f"（夜莺的通讯似乎受到了干扰……）\n[系统提示：AI 调用失败 - {str(e)}]"
+            text = f"（枭的通讯似乎受到了干扰……）\n[系统提示：AI 调用失败 - {str(e)}]"
 
         self.game_state["history"].append({
             "type": "narrative",
