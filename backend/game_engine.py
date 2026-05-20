@@ -92,6 +92,13 @@ TRAINING_OPTIONS = [
     {"id": "combat", "name": "实战特训", "cost": 15000, "ap": 2, "desc": "高强度实战模拟，战力+3", "effect": ("skill", 3), "min_lv": 4},
 ]
 
+# ============================================================
+# 竞争对手数据
+# ============================================================
+
+RIVAL_NAMES = ["赤蛇帮", "暗影会", "血手团", "青鸾帮", "铁骨堂"]
+RIVAL_ACTIONS = ["steal_contract", "poach", "provoke", "expand"]
+
 EVENTS = [
     {
         "type": "competitor",
@@ -166,6 +173,7 @@ class GameEngine:
             "hitmen": [],
             "contracts": [],
             "weapons": self._generate_weapons(8),
+            "rivals": self._generate_rivals(),
             "history": [],
             "game_over": False,
         }
@@ -186,6 +194,7 @@ class GameEngine:
             "hitmen": [],
             "contracts": [],
             "weapons": self._generate_weapons(8),
+            "rivals": self._generate_rivals(),
             "history": [],
             "game_over": False,
         }
@@ -612,6 +621,14 @@ class GameEngine:
         # 刷新契约板
         self.game_state["contracts"] = self._generate_contracts(3)
 
+        # 竞争对手行动
+        rival_events = self._rival_turn()
+        rival_narrative = ""
+        if rival_events:
+            rival_narrative = "\n\n⚔️ 竞争对手动态："
+            for name, action in rival_events:
+                rival_narrative += f"\n  {name} {action}"
+
         # 恢复AP
         self.game_state["ap"] = self.game_state["max_ap"]
         self.game_state["day"] += 1
@@ -630,6 +647,10 @@ class GameEngine:
             narrative += f"\n\n⚠️ {event['poached']['name']} 被竞争对手挖走了！"
         elif event.get("no_effect"):
             narrative += "\n\n所幸没有重大损失。"
+
+        # 添加竞争对手动态
+        if rival_events:
+            narrative += rival_narrative
 
         # 检查游戏结束
         if self.game_state["funds"] <= 0 or self.game_state["reputation"] <= 0:
@@ -784,6 +805,96 @@ class GameEngine:
             hitman["lv"] += 1
             hitman["skill"] = min(10, hitman["skill"] + 1)
             needed = hitman["lv"] * 50
+
+    # ---- 竞争对手系统 ----
+
+    def _generate_rivals(self):
+        """生成初始竞争对手"""
+        count = random.randint(2, 3)
+        names = random.sample(RIVAL_NAMES, min(count, len(RIVAL_NAMES)))
+        rivals = []
+        for i, name in enumerate(names):
+            rivals.append({
+                "id": i + 1,
+                "name": name,
+                "funds": random.randint(30000, 80000),
+                "reputation": random.randint(15, 35),
+                "strength": random.randint(10, 30),
+                "territory": random.randint(1, 4),
+                "hostile": random.randint(20, 60),
+                "alive": True,
+            })
+        return rivals
+
+    def show_rivals(self):
+        """展示竞争对手列表"""
+        alive = [r for r in self.game_state["rivals"] if r["alive"]]
+        return alive, f"枭展开情报地图：'城里还有 {len(alive)} 个组织在跟我们抢地盘。'"
+
+    def attack_rival(self, rival_id: int, hitman_id: int):
+        """派遣杀手攻击竞争对手"""
+        rival = None
+        for r in self.game_state["rivals"]:
+            if r["id"] == rival_id and r["alive"]:
+                rival = r
+                break
+        if not rival:
+            return "找不到这个目标。"
+        hitman = None
+        for h in self.game_state["hitmen"]:
+            if h["id"] == hitman_id and h["status"] == "idle":
+                hitman = h
+                break
+        if not hitman:
+            return "没有可派遣的杀手。"
+        if self.game_state["ap"] <= 0:
+            return "行动力不够了。"
+        self._modify_state("ap", -1)
+        # 计算攻击成功率
+        player_power = len([h for h in self.game_state["hitmen"] if h["status"] == "idle"]) * 5 + sum(h["skill"] for h in self.game_state["hitmen"])
+        success_chance = player_power / (player_power + rival["strength"])
+        success_chance = max(0.2, min(0.9, success_chance))
+        if random.random() < success_chance:
+            gained = rival["territory"] * 5000 + rival["reputation"] * 200
+            self._modify_state("funds", gained)
+            self._modify_state("reputation", 5)
+            rival["alive"] = False
+            hitman["exp"] = hitman.get("exp", 0) + 50
+            self._check_level_up(hitman)
+            return f"行动成功！{rival['name']} 已被铲除，获得 ¥{gained}，声望 +5。"
+        else:
+            hitman["status"] = "injured"
+            self._modify_state("reputation", -3)
+            return f"行动失败……{hitman['name']} 受伤了，声望 -3。"
+
+    def _rival_turn(self):
+        """每个对手执行一次回合行动"""
+        events = []
+        for rival in self.game_state["rivals"]:
+            if not rival["alive"]:
+                continue
+            action = random.choice(RIVAL_ACTIONS)
+            if action == "steal_contract":
+                contracts = [c for c in self.game_state["contracts"] if not c.get("taken")]
+                if contracts:
+                    stolen = random.choice(contracts)
+                    stolen["taken"] = True
+                    events.append((rival["name"], f"抢走了契约「{stolen['name']}」"))
+            elif action == "poach":
+                hitmen = [h for h in self.game_state["hitmen"] if h["loyalty"] <= 5]
+                if hitmen and random.random() < 0.3:
+                    target = random.choice(hitmen)
+                    self.game_state["hitmen"].remove(target)
+                    events.append((rival["name"], f"挖走了杀手 {target['name']}"))
+            elif action == "provoke":
+                dmg = random.randint(2, 5)
+                self._modify_state("reputation", -dmg)
+                events.append((rival["name"], f"挑衅我们，声望 -{dmg}"))
+            elif action == "expand":
+                rival["territory"] += 1
+                rival["strength"] += 2
+                events.append((rival["name"], f"扩张了地盘"))
+        return events
 
     def _call_ai(self, scene_type: str, context: str) -> str:
         """调用 DeepSeek 生成叙事"""
