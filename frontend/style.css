@@ -265,6 +265,10 @@ html, body {
     flex: 1;
     padding: 16px;
     overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+    touch-action: pan-y;
     display: flex;
     flex-direction: column;
     gap: 12px;
@@ -911,5 +915,122 @@ html, body {
     .btn {
         padding: 8px 14px;
         font-size: 12px;
+    }
+}
+
+/* ============================
+   Mobile (<= 600px)
+   ============================ */
+@media (max-width: 600px) {
+    #app {
+        padding: 4px;
+        height: 100dvh;
+    }
+    .header {
+        padding: 8px 12px;
+        margin-bottom: 4px;
+    }
+    .header-title h1 {
+        font-size: 14px;
+    }
+    .header-resources {
+        gap: 4px;
+    }
+    .resource {
+        font-size: 11px;
+        padding: 2px 6px;
+    }
+    .day-badge {
+        font-size: 11px;
+        padding: 2px 8px;
+    }
+
+    /* 三栏改上下排列 */
+    .main-area {
+        flex-direction: column;
+        min-height: 0;
+    }
+    .stats-panel {
+        flex: 0 0 auto;
+        flex-direction: row;
+        flex-wrap: wrap;
+        padding: 6px 10px;
+        gap: 4px;
+        border-right: none;
+        border-bottom: 1px solid var(--border);
+    }
+    .stats-panel h3 { display: none; }
+    .stats-panel .stat-card {
+        flex: 1;
+        min-width: 70px;
+        padding: 4px 8px;
+        margin-bottom: 0;
+    }
+    .stats-panel .stat-card .label {
+        font-size: 10px;
+    }
+    .stats-panel .stat-card .big-value {
+        font-size: 14px;
+    }
+    .stats-panel .stat-card:last-child {
+        display: none;
+    }
+    #reset-link {
+        display: none;
+    }
+
+    /* 叙事区域占大部分屏幕 */
+    .narrative-panel {
+        flex: 1;
+        min-height: 0;
+    }
+    .narrative-content {
+        padding: 8px 12px;
+        max-height: none;
+    }
+    .narrative-msg {
+        padding: 8px 12px;
+        font-size: 13px;
+    }
+
+    /* 杀手面板缩小 */
+    .hitman-panel {
+        flex: 0 0 auto;
+        max-height: 120px;
+        border-left: none;
+        border-top: 1px solid var(--border);
+    }
+    .hitman-header h3 {
+        font-size: 12px;
+    }
+    .hitman-card {
+        padding: 6px 10px;
+        font-size: 12px;
+    }
+
+    /* 按钮大一点方便触摸 */
+    .action-bar {
+        flex-wrap: nowrap;
+        gap: 4px;
+        padding: 6px 4px;
+    }
+    .btn {
+        padding: 10px 8px;
+        font-size: 12px;
+        min-height: 44px;
+    }
+    .btn-sm {
+        padding: 8px 6px;
+        font-size: 11px;
+        min-height: 38px;
+    }
+
+    /* 模态框全屏 */
+    .modal {
+        width: 95%;
+        max-height: 85vh;
+    }
+    .modal-body {
+        max-height: 60vh;
     }
 }
