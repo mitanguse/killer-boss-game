@@ -63,6 +63,35 @@ CONTRACT_TEMPLATES = [
     ("斩首行动", "致命", "近战", 48000, 55),
 ]
 
+# ============================================================
+# 武器数据
+# ============================================================
+
+WEAPON_TYPES = ["手枪", "狙击枪", "匕首", "炸药", "黑客设备"]
+WEAPON_NAMES = {
+    "手枪": ["格洛克-17", "伯莱塔M9", "CZ-75", "P226", "沙漠之鹰"],
+    "狙击枪": ["AWM", "SVD", "M24", "巴雷特M82", "PSG-1"],
+    "匕首": ["蝴蝶刀", "战术直刀", "爪刀", "军刺", "伞兵刀"],
+    "炸药": ["C4塑胶炸药", "手雷", "闪光弹", "燃烧瓶", "地雷"],
+    "黑客设备": ["破解终端", "信号干扰器", "数据采集器", "加密狗", "无人机"],
+}
+RARITIES = ["普通", "精良", "稀有", "传说"]
+RARITY_BONUS = {"普通": 0, "精良": 1, "稀有": 2, "传说": 4}
+RARITY_PRICE = {"普通": 3000, "精良": 8000, "稀有": 18000, "传说": 40000}
+RARITY_REP = {"普通": 0, "精良": 5, "稀有": 20, "传说": 45}
+
+# ============================================================
+# 训练数据
+# ============================================================
+
+TRAINING_OPTIONS = [
+    {"id": "phys", "name": "体能训练", "cost": 4000, "ap": 1, "desc": "提升基础体能，战力+1", "effect": ("skill", 1)},
+    {"id": "shoot", "name": "射击训练", "cost": 7000, "ap": 1, "desc": "提升射击精度，战力+1", "effect": ("skill", 1), "min_lv": 2},
+    {"id": "stealth", "name": "潜入训练", "cost": 10000, "ap": 2, "desc": "提升潜行技巧，战力+2", "effect": ("skill", 2), "min_lv": 3},
+    {"id": "loyalty", "name": "忠诚培养", "cost": 3000, "ap": 1, "desc": "提升组织忠诚度，忠诚+1", "effect": ("loyalty", 1)},
+    {"id": "combat", "name": "实战特训", "cost": 15000, "ap": 2, "desc": "高强度实战模拟，战力+3", "effect": ("skill", 3), "min_lv": 4},
+]
+
 EVENTS = [
     {
         "type": "competitor",
@@ -136,10 +165,12 @@ class GameEngine:
             "day": 1,
             "hitmen": [],
             "contracts": [],
+            "weapons": self._generate_weapons(8),
             "history": [],
             "game_over": False,
         }
-        self._action_context = {}  # 暂存多步操作的上下文
+        self._action_context = {}
+        self._weapon_id_counter = 100
         self.used_names = set()
 
     # ---- 状态管理 ----
@@ -154,10 +185,12 @@ class GameEngine:
             "day": 1,
             "hitmen": [],
             "contracts": [],
+            "weapons": self._generate_weapons(8),
             "history": [],
             "game_over": False,
         }
         self._action_context = {}
+        self._weapon_id_counter = 100
         self.used_names = set()
 
     def get_state(self):
@@ -200,7 +233,7 @@ class GameEngine:
         return name
 
     def _generate_hitman(self, skill_level=None):
-        """生成一个随机杀手"""
+        """生成一个随机杀手（含等级、经验、武器栏）"""
         if skill_level is None:
             skill_level = random.choices([1, 2, 3, 4, 5], weights=[25, 30, 25, 15, 5])[0]
         specialty = random.choice(SPECIALTIES)
@@ -213,6 +246,10 @@ class GameEngine:
             "loyalty": loyalty,
             "salary": salary,
             "skill": skill_level,
+            "lv": 1,
+            "exp": 0,
+            "weapon_id": None,
+            "missions_completed": 0,
             "status": "idle",
         }
 
@@ -411,6 +448,10 @@ class GameEngine:
             "loyalty": candidate["loyalty"],
             "salary": candidate["salary"],
             "skill": candidate["skill"],
+            "lv": 1,
+            "exp": 0,
+            "weapon_id": None,
+            "missions_completed": 0,
             "status": "idle",
         }
         self.game_state["hitmen"].append(new_hitman)
@@ -479,7 +520,12 @@ class GameEngine:
             self._modify_state("funds", contract["reward"])
             rep_gain = {"简单": 2, "中等": 4, "困难": 7, "致命": 12}
             self._modify_state("reputation", rep_gain.get(contract["difficulty"], 3))
-            hitman["status"] = "idle"  # 任务完成
+            hitman["status"] = "idle"
+            # 任务经验
+            exp_gain = {"简单": 20, "中等": 40, "困难": 80, "致命": 150}
+            hitman["exp"] = hitman.get("exp", 0) + exp_gain.get(contract["difficulty"], 20)
+            hitman["missions_completed"] = hitman.get("missions_completed", 0) + 1
+            self._check_level_up(hitman)
             # 忠诚度可能上升
             if random.random() < 0.3:
                 hitman["loyalty"] = min(10, hitman["loyalty"] + 1)
@@ -594,6 +640,150 @@ class GameEngine:
         return narrative, event
 
     # ---- AI 叙事生成 ----
+
+    # ---- 武器系统 ----
+
+    def _generate_weapons(self, count=8):
+        """生成武器商店的初始库存"""
+        weapons = []
+        for _ in range(count):
+            wtype = random.choice(list(WEAPON_NAMES.keys()))
+            wname = random.choice(WEAPON_NAMES[wtype])
+            rarity = random.choices(RARITIES, weights=[40, 30, 20, 10])[0]
+            self._weapon_id_counter += 1
+            weapons.append({
+                "id": self._weapon_id_counter,
+                "name": wname,
+                "type": wtype,
+                "rarity": rarity,
+                "bonus": RARITY_BONUS[rarity],
+                "price": RARITY_PRICE[rarity],
+                "rep_required": RARITY_REP[rarity],
+                "owned": False,
+                "equipped_by": None,
+            })
+        return weapons
+
+    def show_weapon_shop(self):
+        """展示武器商店"""
+        available = [w for w in self.game_state["weapons"] if not w["owned"]]
+        if not available:
+            return [], "枭摇了摇头：'老板，武器商这边暂时没货了。'"
+        return available, f"枭推了推桌上的武器清单：'这是黑市上能搞到的好货。'"
+
+    def buy_weapon(self, weapon_id: int):
+        """购买武器"""
+        if self.game_state["ap"] <= 0:
+            return "行动力不够，下次吧。"
+        weapon = None
+        for w in self.game_state["weapons"]:
+            if w["id"] == weapon_id and not w["owned"]:
+                weapon = w
+                break
+        if not weapon:
+            return "找不到这件武器。"
+        if self.game_state["funds"] < weapon["price"]:
+            return f"资金不够，{weapon['name']} 需要 ¥{weapon['price']}。"
+        if self.game_state["reputation"] < weapon["rep_required"]:
+            return f"声望不够，需要 {weapon['rep_required']} 声望才能购买{weapon['name']}。"
+        self._modify_state("funds", -weapon["price"])
+        self._modify_state("ap", -1)
+        weapon["owned"] = True
+        return f"购买成功！{weapon['name']}（{weapon['rarity']}）已入库。"
+
+    def equip_weapon(self, hitman_id: int, weapon_id: int):
+        """给杀手装备武器"""
+        hitman = None
+        for h in self.game_state["hitmen"]:
+            if h["id"] == hitman_id:
+                hitman = h
+                break
+        if not hitman:
+            return "找不到这个杀手。"
+        weapon = None
+        for w in self.game_state["weapons"]:
+            if w["id"] == weapon_id and w["owned"]:
+                weapon = w
+                break
+        if not weapon:
+            return "找不到这件武器。"
+        # 先卸下当前装备的武器
+        if hitman["weapon_id"]:
+            for w in self.game_state["weapons"]:
+                if w["id"] == hitman["weapon_id"]:
+                    w["equipped_by"] = None
+        weapon["equipped_by"] = hitman["id"]
+        hitman["weapon_id"] = weapon["id"]
+        return f"{hitman['name']} 已装备 {weapon['name']}（战力+{weapon['bonus']}）。"
+
+    def unequip_weapon(self, hitman_id: int):
+        """卸下杀手武器"""
+        hitman = None
+        for h in self.game_state["hitmen"]:
+            if h["id"] == hitman_id:
+                hitman = h
+                break
+        if not hitman or not hitman["weapon_id"]:
+            return "这个杀手没有装备武器。"
+        for w in self.game_state["weapons"]:
+            if w["id"] == hitman["weapon_id"]:
+                w["equipped_by"] = None
+                break
+        hitman["weapon_id"] = None
+        return f"已从 {hitman['name']} 身上卸下武器。"
+
+    def show_training(self):
+        """展示训练选项"""
+        if self.game_state["ap"] <= 0:
+            return [], "今天的行动力不够了，明天再练吧。"
+        hitmen = [h for h in self.game_state["hitmen"] if h["status"] == "idle"]
+        if not hitmen:
+            return [], "没有空闲的杀手可以训练。"
+        return TRAINING_OPTIONS, "枭拿出一份训练清单：'该让这些人活动活动筋骨了。'"
+
+    def do_training(self, training_id: str, hitman_id: int):
+        """执行训练"""
+        hitman = None
+        for h in self.game_state["hitmen"]:
+            if h["id"] == hitman_id and h["status"] == "idle":
+                hitman = h
+                break
+        if not hitman:
+            return "找不到这个杀手，或者他正在执行任务。"
+        training = None
+        for t in TRAINING_OPTIONS:
+            if t["id"] == training_id:
+                training = t
+                break
+        if not training:
+            return "无效的训练项目。"
+        if hitman["lv"] < training.get("min_lv", 1):
+            return f"{hitman['name']} 等级不够（需要 Lv.{training['min_lv']}），先练点基础的吧。"
+        if self.game_state["funds"] < training["cost"]:
+            return f"资金不够，{training['name']} 需要 ¥{training['cost']}。"
+        if self.game_state["ap"] < training["ap"]:
+            return "行动力不够完成这项训练。"
+        self._modify_state("funds", -training["cost"])
+        self._modify_state("ap", -training["ap"])
+        attr, amount = training["effect"]
+        if attr == "skill":
+            hitman["skill"] = min(10, hitman["skill"] + amount)
+        elif attr == "loyalty":
+            hitman["loyalty"] = min(10, hitman["loyalty"] + amount)
+        # 获得经验
+        exp_gain = training["ap"] * 20
+        hitman["exp"] += exp_gain
+        self._check_level_up(hitman)
+        return f"{hitman['name']} 完成了{training['name']}，{attr} +{amount}，经验 +{exp_gain}。"
+
+    def _check_level_up(self, hitman):
+        """检查杀手升级"""
+        needed = hitman["lv"] * 50
+        while hitman["exp"] >= needed:
+            hitman["exp"] -= needed
+            hitman["lv"] += 1
+            hitman["skill"] = min(10, hitman["skill"] + 1)
+            needed = hitman["lv"] * 50
 
     def _call_ai(self, scene_type: str, context: str) -> str:
         """调用 DeepSeek 生成叙事"""
