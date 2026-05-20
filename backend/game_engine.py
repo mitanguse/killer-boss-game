@@ -127,7 +127,18 @@ class GameEngine:
             base_url="https://api.deepseek.com",
         )
         self.system_prompt = system_prompt
-        self.game_state = None
+        self.game_state = {
+            "funds": 50000,
+            "reputation": 10,
+            "max_reputation": 100,
+            "ap": 3,
+            "max_ap": 3,
+            "day": 1,
+            "hitmen": [],
+            "contracts": [],
+            "history": [],
+            "game_over": False,
+        }
         self._action_context = {}  # 暂存多步操作的上下文
         self.used_names = set()
 
