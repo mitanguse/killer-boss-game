@@ -48,6 +48,7 @@ const dom = {
     btnStart: $('#btn-start'),
     btnContracts: $('#btn-contracts'),
     btnRecruit: $('#btn-recruit'),
+    btnRivals: $('#btn-rivals'),
     btnWeaponShop: $('#btn-weapon-shop'),
     btnTraining: $('#btn-training'),
     btnEndDay: $('#btn-end-day'),
@@ -238,8 +239,9 @@ function updateButtons(state) {
 
     dom.btnRecruit.disabled = !gameStarted || state.game_over || !apOk;
     dom.btnContracts.disabled = !gameStarted || state.game_over;
-    dom.btnWeaponShop.disabled = !gameStarted || state.game_over || state.hitmen.length === 0;
+    dom.btnWeaponShop.disabled = !gameStarted || state.game_over;
     dom.btnTraining.disabled = !gameStarted || state.game_over || !apOk || state.hitmen.length === 0;
+    dom.btnRivals.disabled = !gameStarted || state.game_over;
     dom.btnEndDay.disabled = !gameStarted || state.game_over;
 }
 
@@ -553,6 +555,41 @@ async function handleRestart() {
     await handleStart();
 }
 
+// --- 竞争对手 ---
+async function handleRivals() {
+    modalState = 'rivals';
+    const data = await apiCall('rivals');
+    if (!data) return;
+    closeModal();
+    const rivals = data.extra?.rivals || [];
+    const idleHitmen = (data.state.hitmen || []).filter(h => h.status === 'idle');
+    let html = '';
+    rivals.forEach(r => {
+        const hostilityBar = '🔴'.repeat(Math.ceil(r.hostile / 20)).padEnd(5, '⚪');
+        html += `<div style="border:1px solid #c0392b;border-radius:8px;padding:10px;margin-bottom:8px;background:#221111;">`;
+        html += `<div style="font-weight:bold;color:#e74c3c;">${r.name}</div>`;
+        html += `<div style="font-size:12px;color:#888;">💪战力${r.strength} · 🏠${r.territory}街区 · ⭐声望${r.reputation}</div>`;
+        html += `<div style="font-size:11px;color:#666;">敌意: ${hostilityBar}</div>`;
+        if (idleHitmen.length > 0 && data.state.ap > 0) {
+            html += '<div style="margin-top:4px;font-size:11px;color:#aaa;">派遣攻击:</div><div>';
+            idleHitmen.forEach(h => {
+                html += `<button class="btn btn-sm" onclick="doAttackRival(${r.id},${h.id})" style="margin:2px;font-size:11px;">${h.name}</button>`;
+            });
+            html += '</div>';
+        }
+        html += '</div>';
+    });
+    showModal('⚔️ 竞争对手', html || '<p style="color:#888;">城里已经没有活着的对手了。</p>');
+}
+
+async function doAttackRival(rivalId, hitmanId) {
+    closeModal();
+    const data = await apiCall('attack_rival', { rival_id: rivalId, hitman_id: hitmanId });
+    if (!data) return;
+    updateStats(data.state);
+    appendNarrative(data.narrative, 'system');
+}
+
 // --- 武器库 ---
 async function handleWeaponShop() {
     modalState = 'weapon_shop';
@@ -647,6 +684,7 @@ async function handleReset() {
 function disableGameButtons() {
     dom.btnRecruit.disabled = true;
     dom.btnContracts.disabled = true;
+    dom.btnRivals.disabled = true;
     dom.btnWeaponShop.disabled = true;
     dom.btnTraining.disabled = true;
     dom.btnEndDay.disabled = true;
@@ -739,6 +777,7 @@ dom.btnEndDay.addEventListener('click', handleEndDay);
 dom.btnSave.addEventListener('click', handleSave);
 dom.btnLoad.addEventListener('click', handleLoad);
 dom.btnRestart.addEventListener('click', handleRestart);
+dom.btnRivals.addEventListener('click', handleRivals);
 dom.btnWeaponShop.addEventListener('click', handleWeaponShop);
 dom.btnTraining.addEventListener('click', handleTraining);
 dom.resetLink.addEventListener('click', handleReset);
