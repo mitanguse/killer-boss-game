@@ -1,0 +1,8 @@
+.env
+__pycache__/
+*.pyc
+*.pyo
+saves/
+test_*.py
+app.py
+DESIGN.md

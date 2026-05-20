@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🗡️ 杀手组织老板模拟器</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="app">
+        <!-- ============ Header (always visible) ============ -->
+        <header class="header">
+            <div class="header-title">
+                <h1>🗡️ 杀手组织老板模拟器</h1>
+                <span class="day-badge" id="day-badge">第 1 天</span>
+            </div>
+            <div class="header-resources">
+                <span class="resource funds">
+                    <span class="icon">💰</span>
+                    <span class="value" id="header-funds">¥50,000</span>
+                </span>
+                <span class="resource rep">
+                    <span class="icon">⭐</span>
+                    <span class="value" id="header-rep">10/100</span>
+                </span>
+                <span class="resource ap">
+                    <span class="icon">⚡</span>
+                    <span class="value" id="header-ap">3/3</span>
+                </span>
+            </div>
+        </header>
+
+        <!-- ============ Game UI (hidden until start) ============ -->
+        <div id="game-ui" class="hidden" style="display:flex;flex-direction:column;flex:1;min-height:0;">
+            <div class="main-area">
+                <!-- Left: Stats Panel -->
+                <aside class="stats-panel">
+                    <h3>组织状态</h3>
+
+                    <div class="stat-card funds">
+                        <div class="label">💰 资金</div>
+                        <div class="big-value" id="stat-funds">¥50,000</div>
+                    </div>
+
+                    <div class="stat-card rep">
+                        <div class="label">⭐ 声望</div>
+                        <div class="big-value" id="stat-rep">10</div>
+                        <div class="rep-bar">
+                            <div class="rep-bar-fill" id="rep-bar-fill" style="width:10%"></div>
+                        </div>
+                    </div>
+
+                    <div class="stat-card ap">
+                        <div class="label">⚡ 行动力</div>
+                        <div class="big-value" id="stat-ap-dots">
+                            <div class="ap-dots" id="ap-dots">
+                                <div class="ap-dot filled"></div>
+                                <div class="ap-dot filled"></div>
+                                <div class="ap-dot filled"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="stat-card" style="border-color:var(--accent-purple);">
+                        <div class="label">📅 天数</div>
+                        <div class="big-value" id="stat-day" style="color:var(--accent-purple);">第 1 天</div>
+                    </div>
+
+                    <div style="margin-top:auto;padding-top:12px;border-top:1px solid var(--border);">
+                        <button class="btn btn-sm" id="reset-link" style="width:100%;font-size:11px;color:var(--text-muted);">
+                            🔄 重置游戏
+                        </button>
+                    </div>
+                </aside>
+
+                <!-- Center: Narrative Panel -->
+                <main class="narrative-panel">
+                    <div class="narrative-header">
+                        <h3>📜 组织日志</h3>
+                    </div>
+                    <div class="narrative-content" id="narrative-content"></div>
+                </main>
+
+                <!-- Right: Hitman Panel -->
+                <aside class="hitman-panel">
+                    <div class="hitman-header">
+                        <h3>🔫 杀手名录</h3>
+                        <span class="hitman-count" id="hitman-count">0</span>
+                    </div>
+                    <div class="hitman-list" id="hitman-list"></div>
+                </aside>
+            </div>
+
+            <!-- ============ Action Bar ============ -->
+            <nav class="action-bar">
+                <button class="btn btn-gold" id="btn-contracts" disabled>
+                    📋 契约板
+                </button>
+                <button class="btn btn-primary" id="btn-recruit" disabled>
+                    👤 招募
+                </button>
+                <button class="btn btn-sm" id="btn-save" disabled>
+                    💾 存档
+                </button>
+                <button class="btn btn-sm" id="btn-load" disabled>
+                    📂 读档
+                </button>
+                <button class="btn" id="btn-end-day" disabled>
+                    🌙 结束今天
+                </button>
+            </nav>
+        </div>
+
+        <!-- ============ Start Screen ============ -->
+        <div class="start-screen" id="start-screen">
+            <div class="logo">🗡️</div>
+            <div>
+                <h1 style="font-size:28px;font-weight:700;background:linear-gradient(135deg,#c0392b,#d4a017);background-clip:text;-webkit-background-clip:text;-webkit-text-fill-color:transparent;">
+                    杀手组织老板模拟器
+                </h1>
+            </div>
+            <div class="tagline">
+                在这座城市的暗面，<br>
+                你继承了前任留下的小小基业。<br>
+                钱不多，人没有，仇家倒是不少。<br>
+                <br>
+                但夜莺还在——她总能帮你摆平一切。
+            </div>
+            <button class="btn btn-start" id="btn-start">
+                🎮 开始新游戏
+            </button>
+        </div>
+    </div>
+
+    <!-- ============ Modal ============ -->
+    <div class="modal-overlay hidden" id="modal-overlay">
+        <div class="modal">
+            <div class="modal-header" id="modal-header">
+                <h2>标题</h2>
+                <button class="modal-close" id="modal-close">&times;</button>
+            </div>
+            <div class="modal-body" id="modal-body"></div>
+        </div>
+    </div>
+
+    <!-- ============ Loading Overlay ============ -->
+    <div class="loading-overlay hidden" id="loading-overlay">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">夜莺正在收集情报……</div>
+    </div>
+
+    <!-- ============ Hitman Detail Tooltip ============ -->
+    <div class="hitman-detail hidden" id="hitman-detail"></div>
+
+    <!-- ============ Scripts ============ -->
+    <script src="script.js"></script>
+</body>
+</html>
