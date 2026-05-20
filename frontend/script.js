@@ -75,12 +75,26 @@ const dom = {
 // API 调用
 // ============================================================
 
+const TIMEOUT_MS = 25000;
+
+async function fetchWithTimeout(url, options, timeoutMs) {
+    timeoutMs = timeoutMs || TIMEOUT_MS;
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+        const resp = await fetch(url, { ...options, signal: controller.signal });
+        return resp;
+    } finally {
+        clearTimeout(timer);
+    }
+}
+
 async function apiCall(action, params = {}) {
     if (loading) return null;
     setLoading(true);
 
     try {
-        const resp = await fetch(`${API_BASE}/api/act`, {
+        const resp = await fetchWithTimeout(`${API_BASE}/api/act`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ action, params }),
@@ -93,9 +107,14 @@ async function apiCall(action, params = {}) {
         return data;
     } catch (err) {
         console.error('API call failed:', err);
-        appendNarrative(`⚠️ 通讯中断：${err.message}`, 'system');
-        setLoading(false);
+        if (err.name === 'AbortError') {
+            appendNarrative('⚠️ 请求超时，请检查网络后重试。', 'system');
+        } else {
+            appendNarrative(`⚠️ 通讯中断：${err.message}`, 'system');
+        }
         return null;
+    } finally {
+        setLoading(false);
     }
 }
 
@@ -104,7 +123,7 @@ async function apiStart() {
     setLoading(true);
 
     try {
-        const resp = await fetch(`${API_BASE}/api/start`, {
+        const resp = await fetchWithTimeout(`${API_BASE}/api/start`, {
             method: 'POST',
         });
         if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
@@ -112,8 +131,12 @@ async function apiStart() {
         return data;
     } catch (err) {
         console.error('Start failed:', err);
-        setLoading(false);
+        if (err.name === 'AbortError') {
+            appendNarrative('⚠️ 请求超时，请检查网络后重试。', 'system');
+        }
         return null;
+    } finally {
+        setLoading(false);
     }
 }
 
