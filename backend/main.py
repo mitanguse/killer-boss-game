@@ -187,6 +187,25 @@ def perform_action(req: ActRequest):
                 extra={"saves": saves},
             )
 
+        elif action == "rivals":
+            rivals, narrative = engine.show_rivals()
+            return StateResponse(
+                narrative=narrative,
+                state=engine.get_state(),
+                extra={"rivals": rivals},
+            )
+
+        elif action == "attack_rival":
+            rival_id = params.get("rival_id")
+            hitman_id = params.get("hitman_id")
+            if not rival_id or not hitman_id:
+                return StateResponse(error="请选择目标和派遣的杀手。", state=engine.get_state())
+            narrative = engine.attack_rival(rival_id, hitman_id)
+            return StateResponse(
+                narrative=narrative,
+                state=engine.get_state(),
+            )
+
         elif action == "weapon_shop":
             weapons, narrative = engine.show_weapon_shop()
             return StateResponse(
