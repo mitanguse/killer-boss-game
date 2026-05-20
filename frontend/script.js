@@ -51,6 +51,7 @@ const dom = {
     btnEndDay: $('#btn-end-day'),
     btnSave: $('#btn-save'),
     btnLoad: $('#btn-load'),
+    btnRestart: $('#btn-restart'),
     resetLink: $('#reset-link'),
 
     // Screens
@@ -405,11 +406,7 @@ async function executeAssign(contractIndex, hitmanId) {
 
     if (data.state.game_over) {
         appendNarrative('☠️ 游戏结束。这座城市的暗面永远在吞噬弱者。', 'game-over');
-        dom.btnRecruit.disabled = true;
-        dom.btnContracts.disabled = true;
-        dom.btnEndDay.disabled = true;
-        dom.btnSave.disabled = true;
-        dom.btnLoad.disabled = true;
+        disableGameButtons();
     }
     setLoading(false);
 }
@@ -485,11 +482,7 @@ async function handleEndDay() {
 
     if (data.state.game_over) {
         appendNarrative('☠️ 游戏结束。这座城市又吞掉了一个组织。', 'game-over');
-        dom.btnRecruit.disabled = true;
-        dom.btnContracts.disabled = true;
-        dom.btnEndDay.disabled = true;
-        dom.btnSave.disabled = true;
-        dom.btnLoad.disabled = true;
+        disableGameButtons();
     }
     setLoading(false);
 }
@@ -522,6 +515,11 @@ async function handleLoad() {
     setLoading(false);
 }
 
+async function handleRestart() {
+    dom.btnRestart.classList.add('hidden');
+    await handleStart();
+}
+
 async function handleReset() {
     if (!confirm('确定要重置游戏吗？所有进度将丢失。')) return;
     const data = await apiCall('reset');
@@ -532,6 +530,15 @@ async function handleReset() {
     dom.startScreen.classList.remove('hidden');
     dom.gameUI.classList.add('hidden');
     setLoading(false);
+}
+
+function disableGameButtons() {
+    dom.btnRecruit.disabled = true;
+    dom.btnContracts.disabled = true;
+    dom.btnEndDay.disabled = true;
+    dom.btnSave.disabled = true;
+    dom.btnLoad.disabled = true;
+    dom.btnRestart.classList.remove('hidden');
 }
 
 // Helper: call action, update state, append narrative
@@ -593,7 +600,7 @@ function formatMoney(amount) {
 function setLoading(isLoading) {
     loading = isLoading;
     dom.loadingOverlay.classList.toggle('hidden', !isLoading);
-    dom.loadingText.textContent = isLoading ? '夜莺正在收集情报……' : '';
+    dom.loadingText.textContent = isLoading ? '枭正在收集情报……' : '';
 }
 
 // ============================================================
@@ -606,6 +613,7 @@ dom.btnRecruit.addEventListener('click', handleRecruit);
 dom.btnEndDay.addEventListener('click', handleEndDay);
 dom.btnSave.addEventListener('click', handleSave);
 dom.btnLoad.addEventListener('click', handleLoad);
+dom.btnRestart.addEventListener('click', handleRestart);
 dom.resetLink.addEventListener('click', handleReset);
 
 // ============================================================
