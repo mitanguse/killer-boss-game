@@ -163,6 +163,7 @@ class GameEngine:
             base_url="https://api.deepseek.com",
         )
         self.system_prompt = system_prompt
+        self._weapon_id_counter = 100
         self.game_state = {
             "funds": 50000,
             "reputation": 10,
@@ -178,12 +179,12 @@ class GameEngine:
             "game_over": False,
         }
         self._action_context = {}
-        self._weapon_id_counter = 100
         self.used_names = set()
 
     # ---- 状态管理 ----
 
     def reset_game(self):
+        self._weapon_id_counter = 100
         self.game_state = {
             "funds": 50000,
             "reputation": 10,
