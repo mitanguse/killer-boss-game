@@ -48,6 +48,8 @@ const dom = {
     btnStart: $('#btn-start'),
     btnContracts: $('#btn-contracts'),
     btnRecruit: $('#btn-recruit'),
+    btnWeaponShop: $('#btn-weapon-shop'),
+    btnTraining: $('#btn-training'),
     btnEndDay: $('#btn-end-day'),
     btnSave: $('#btn-save'),
     btnLoad: $('#btn-load'),
@@ -197,15 +199,25 @@ function renderHitmen(hitmen) {
 
         const loyaltyHearts = '❤️'.repeat(h.loyalty).padEnd(10, '🤍');
 
+        const weaponName = h.weapon_id ? state.weapons?.find(w => w.id === h.weapon_id)?.name || '' : '';
+        const lv = h.lv || 1;
+        const exp = h.exp || 0;
+        const needExp = lv * 50;
+
         card.innerHTML = `
             <div class="name">
                 ${h.name}
                 <span class="spec-badge">${h.specialty}</span>
             </div>
             <div class="details">
-                <span>⚔️ Lv.${h.skill}</span>
+                <span>⚔️ Lv.${lv}</span>
+                <span>💪 ${h.skill}</span>
                 <span>💰 ${formatMoney(h.salary)}/月</span>
-                <span>${loyaltyHearts}</span>
+            </div>
+            <div class="details" style="font-size:10px;color:#888;">
+                ${weaponName ? '🔫 '+weaponName : ''}
+                <span>❤️${h.loyalty}</span>
+                <span>EXP ${exp}/${needExp}</span>
             </div>
             <span class="status-badge ${h.status}">${statusText(h.status)}</span>
         `;
@@ -226,6 +238,8 @@ function updateButtons(state) {
 
     dom.btnRecruit.disabled = !gameStarted || state.game_over || !apOk;
     dom.btnContracts.disabled = !gameStarted || state.game_over;
+    dom.btnWeaponShop.disabled = !gameStarted || state.game_over || state.hitmen.length === 0;
+    dom.btnTraining.disabled = !gameStarted || state.game_over || !apOk || state.hitmen.length === 0;
     dom.btnEndDay.disabled = !gameStarted || state.game_over;
 }
 
@@ -472,6 +486,25 @@ function handleFireHitman(hitmanId) {
     apiCallAndRefresh('fire', { hitman_id: hitmanId });
 }
 
+// --- 装备/卸下武器 ---
+async function doEquipWeapon(hitmanId, weaponId) {
+    dom.hitmanDetail.classList.add('hidden');
+    const data = await apiCall('equip_weapon', { hitman_id: hitmanId, weapon_id: weaponId });
+    if (!data) return;
+    updateStats(data.state);
+    appendNarrative(data.narrative, 'system');
+    renderHitmen(data.state);
+}
+
+async function doUnequipWeapon(hitmanId) {
+    dom.hitmanDetail.classList.add('hidden');
+    const data = await apiCall('unequip_weapon', { hitman_id: hitmanId });
+    if (!data) return;
+    updateStats(data.state);
+    appendNarrative(data.narrative, 'system');
+    renderHitmen(data.state);
+}
+
 // --- 结束今天 ---
 async function handleEndDay() {
     const data = await apiCall('end_day');
@@ -520,6 +553,85 @@ async function handleRestart() {
     await handleStart();
 }
 
+// --- 武器库 ---
+async function handleWeaponShop() {
+    modalState = 'weapon_shop';
+    const data = await apiCall('weapon_shop');
+    if (!data) return;
+    closeModal();
+    const weapons = data.extra?.weapons || [];
+    if (weapons.length === 0) {
+        appendNarrative(data.narrative, 'system');
+        return;
+    }
+    let html = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">';
+    weapons.forEach(w => {
+        const canBuy = data.state.funds >= w.price && data.state.reputation >= w.rep_required;
+        html += `<div style="border:1px solid #444;border-radius:8px;padding:10px;background:#222;">`;
+        html += `<div style="font-weight:bold;">${w.name}</div>`;
+        html += `<div style="font-size:12px;color:#888;">${w.type} · ${w.rarity}</div>`;
+        html += `<div style="color:#d4a017;">战力+${w.bonus} · ¥${w.price}</div>`;
+        html += `<div style="font-size:11px;color:#666;">需声望: ${w.rep_required}</div>`;
+        if (canBuy) {
+            html += `<button class="btn btn-sm" onclick="doBuyWeapon(${w.id})" style="margin-top:6px;width:100%;">购买</button>`;
+        } else {
+            html += `<button class="btn btn-sm" disabled style="margin-top:6px;width:100%;">${data.state.funds < w.price ? '资金不足' : '声望不够'}</button>`;
+        }
+        html += '</div>';
+    });
+    html += '</div>';
+    showModal('🔫 武器库', html);
+}
+
+async function doBuyWeapon(weaponId) {
+    closeModal();
+    const data = await apiCall('buy_weapon', { weapon_id: weaponId });
+    if (!data) return;
+    updateStats(data.state);
+    appendNarrative(data.narrative, 'system');
+}
+
+// --- 训练 ---
+async function handleTraining() {
+    modalState = 'training';
+    const data = await apiCall('training');
+    if (!data) return;
+    closeModal();
+    const options = data.extra?.training || [];
+    const idleHitmen = (data.state.hitmen || []).filter(h => h.status === 'idle');
+    if (options.length === 0 || idleHitmen.length === 0) {
+        appendNarrative(data.narrative, 'system');
+        return;
+    }
+    let html = '<p>选择训练项目和杀手：</p>';
+    options.forEach(t => {
+        const canAfford = data.state.funds >= t.cost && data.state.ap >= t.ap;
+        html += `<div style="border:1px solid #444;border-radius:8px;padding:10px;margin-bottom:8px;">`;
+        html += `<div style="font-weight:bold;">${t.name}</div>`;
+        html += `<div style="font-size:12px;color:#888;">${t.desc}</div>`;
+        html += `<div style="color:#d4a017;">¥${t.cost} · ⚡${t.ap} AP</div>`;
+        if (t.min_lv) html += `<div style="font-size:11px;color:#666;">需要Lv.${t.min_lv}</div>`;
+        if (!canAfford) {
+            html += `<button class="btn btn-sm" disabled style="width:100%;margin-top:4px;">${data.state.funds < t.cost ? '资金不足' : 'AP不够'}</button>`;
+        } else {
+            idleHitmen.forEach(h => {
+                const canTrain = h.lv >= (t.min_lv || 1);
+                html += `<button class="btn btn-sm" onclick="doTraining('${t.id}',${h.id})" style="margin:2px;" ${!canTrain ? 'disabled' : ''}>${h.name}${!canTrain ? '(等级不够)' : ''}</button>`;
+            });
+        }
+        html += '</div>';
+    });
+    showModal('💪 训练营', html);
+}
+
+async function doTraining(trainingId, hitmanId) {
+    closeModal();
+    const data = await apiCall('do_training', { training_id: trainingId, hitman_id: hitmanId });
+    if (!data) return;
+    updateStats(data.state);
+    appendNarrative(data.narrative, 'system');
+}
+
 async function handleReset() {
     if (!confirm('确定要重置游戏吗？所有进度将丢失。')) return;
     const data = await apiCall('reset');
@@ -535,6 +647,8 @@ async function handleReset() {
 function disableGameButtons() {
     dom.btnRecruit.disabled = true;
     dom.btnContracts.disabled = true;
+    dom.btnWeaponShop.disabled = true;
+    dom.btnTraining.disabled = true;
     dom.btnEndDay.disabled = true;
     dom.btnSave.disabled = true;
     dom.btnLoad.disabled = true;
@@ -564,15 +678,26 @@ function showHitmanDetail(hitman, cardEl) {
         fireBtnHtml = `<button class="btn btn-danger btn-sm" onclick="handleFireHitman(${hitman.id})">🔥 解雇</button>`;
     }
 
+    const lv = hitman.lv || 1;
+    const exp = hitman.exp || 0;
+    const needExp = lv * 50;
+    const weapon = hitman.weapon_id ? state.weapons?.find(w => w.id === hitman.weapon_id) : null;
+    const ownedWeapons = (state.weapons || []).filter(w => w.owned && !w.equipped_by);
+
     detail.innerHTML = `
-        <div class="hd-name">${hitman.name}</div>
+        <div class="hd-name">${hitman.name} <span style="font-size:12px;color:#888;">Lv.${lv}</span></div>
         <div class="hd-row"><span>专长</span><span class="hd-val">${hitman.specialty}</span></div>
-        <div class="hd-row"><span>战力</span><span class="hd-val">⚔️ ${hitman.skill}/5</span></div>
+        <div class="hd-row"><span>战力</span><span class="hd-val">⚔️ ${hitman.skill}/10</span></div>
         <div class="hd-row"><span>忠诚</span><span class="hd-val">❤️ ${hitman.loyalty}/10</span></div>
         <div class="hd-row"><span>状态</span><span class="hd-val">${statusText(hitman.status)}</span></div>
         <div class="hd-row"><span>月薪</span><span class="hd-val">💰 ${formatMoney(hitman.salary)}</span></div>
+        <div class="hd-row"><span>经验</span><span class="hd-val">${exp}/${needExp}</span></div>
+        <div class="hd-row"><span>任务完成</span><span class="hd-val">${hitman.missions_completed || 0} 次</span></div>
+        <div class="hd-row"><span>武器</span><span class="hd-val">${weapon ? '🔫 ' + weapon.name + '(' + weapon.rarity + ' +' + weapon.bonus + ')' : '无'}</span></div>
         <div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border);">
             ${fireBtnHtml}
+            ${weapon ? `<button class="btn btn-sm" onclick="doUnequipWeapon(${hitman.id})" style="margin-top:4px;width:100%;">🔧 卸下武器</button>` : ''}
+            ${ownedWeapons.length > 0 && hitman.status === 'idle' ? ownedWeapons.map(w => `<button class="btn btn-sm" onclick="doEquipWeapon(${hitman.id},${w.id})" style="margin:2px;">🔫 ${w.name}(${w.rarity})</button>`).join('') : ''}
         </div>
     `;
 
@@ -614,6 +739,8 @@ dom.btnEndDay.addEventListener('click', handleEndDay);
 dom.btnSave.addEventListener('click', handleSave);
 dom.btnLoad.addEventListener('click', handleLoad);
 dom.btnRestart.addEventListener('click', handleRestart);
+dom.btnWeaponShop.addEventListener('click', handleWeaponShop);
+dom.btnTraining.addEventListener('click', handleTraining);
 dom.resetLink.addEventListener('click', handleReset);
 
 // ============================================================
