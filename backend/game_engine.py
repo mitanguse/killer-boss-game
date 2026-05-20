@@ -242,7 +242,7 @@ class GameEngine:
         return name
 
     def _generate_hitman(self, skill_level=None):
-        """生成一个随机杀手（含等级、经验、武器栏）"""
+        """生成一个随机杀手（含关系网+内奸标记）"""
         if skill_level is None:
             skill_level = random.choices([1, 2, 3, 4, 5], weights=[25, 30, 25, 15, 5])[0]
         specialty = random.choice(SPECIALTIES)
@@ -260,6 +260,11 @@ class GameEngine:
             "weapon_id": None,
             "missions_completed": 0,
             "status": "idle",
+            "friends": [],
+            "rivals": [],
+            "_is_mole": random.random() < 0.15,  # 15%概率是内奸
+            "mole_owner": None,  # 内奸属于哪个对手
+            "activity_log": [],  # 每天的自主活动记录
         }
 
     def _generate_contracts(self, count=3):
@@ -462,7 +467,29 @@ class GameEngine:
             "weapon_id": None,
             "missions_completed": 0,
             "status": "idle",
+            "friends": [],
+            "rivals": [],
+            "_is_mole": random.random() < 0.15,
+            "mole_owner": None,
+            "activity_log": [],
         }
+
+        # 内奸分配对手
+        if new_hitman["_is_mole"]:
+            alive = [r for r in self.game_state["rivals"] if r["alive"]]
+            if alive:
+                new_hitman["mole_owner"] = random.choice(alive)["name"]
+
+        # 建立关系网
+        existing = [h for h in self.game_state["hitmen"] if h["id"] != new_hitman["id"]]
+        for other in existing:
+            if random.random() < 0.4:
+                new_hitman["friends"].append(other["id"])
+                other["friends"].append(new_hitman["id"])
+            elif random.random() < 0.2:
+                new_hitman["rivals"].append(other["id"])
+                other["rivals"].append(new_hitman["id"])
+
         self.game_state["hitmen"].append(new_hitman)
 
         narrative = self._call_ai(
@@ -597,9 +624,93 @@ class GameEngine:
         )
         return narrative
 
+    # ---- 杀手自主活动 ----
+
+    def _daily_hitman_activities(self):
+        """每个空闲杀手每天随机活动，返回事件列表"""
+        events = []
+        for h in self.game_state["hitmen"]:
+            if h["status"] != "idle":
+                continue
+            # 内奸活动
+            if h["_is_mole"] and random.random() < 0.3:
+                sab = random.choice(["steal", "sabotage", "leak"])
+                if sab == "steal":
+                    loss = random.randint(2000, 8000)
+                    self._modify_state("funds", -loss)
+                    events.append((h["name"], f"偷偷挪用了 ¥{loss} 组织资金（内奸）", "mole"))
+                elif sab == "sabotage":
+                    if self.game_state["weapons"]:
+                        w = random.choice([x for x in self.game_state["weapons"] if x["owned"]])
+                        if w:
+                            w["owned"] = False
+                            w["equipped_by"] = None
+                            events.append((h["name"], f"破坏并遗失了武器「{w['name']}」（内奸）", "mole"))
+                elif sab == "leak":
+                    self._modify_state("reputation", -2)
+                    events.append((h["name"], f"泄露了组织情报，声望-2（内奸）", "mole"))
+                h["activity_log"].append("内奸活动")
+                continue
+
+            # 正常自主活动
+            act = random.choices(
+                ["drink", "fight", "gamble", "train", "lazy", "info", "social"],
+                weights=[25, 10, 15, 10, 20, 10, 10]
+            )[0]
+            if act == "drink":
+                cost = random.randint(500, 2000)
+                self._modify_state("funds", -cost)
+                events.append((h["name"], f"喝花酒花了 ¥{cost}", "activity"))
+            elif act == "fight":
+                if random.random() < 0.5:
+                    h["status"] = "injured"
+                    events.append((h["name"], "在街头斗殴中受伤了", "activity"))
+                else:
+                    gain = random.randint(2000, 5000)
+                    self._modify_state("funds", gain)
+                    events.append((h["name"], f"在斗殴中赢了 ¥{gain} 回来", "activity"))
+            elif act == "gamble":
+                if random.random() < 0.4:
+                    win = random.randint(3000, 10000)
+                    self._modify_state("funds", win)
+                    events.append((h["name"], f"赌钱赢了 ¥{win}", "activity"))
+                else:
+                    loss = random.randint(2000, 6000)
+                    self._modify_state("funds", -loss)
+                    events.append((h["name"], f"赌钱输了 ¥{loss}", "activity"))
+            elif act == "train":
+                gain = random.choice(["skill", "loyalty"])
+                if gain == "skill":
+                    h["skill"] = min(10, h["skill"] + 1)
+                    events.append((h["name"], "自己加练，战力+1", "activity"))
+                else:
+                    h["loyalty"] = min(10, h["loyalty"] + 1)
+                    events.append((h["name"], "参加了组织忠诚培训", "activity"))
+            elif act == "lazy":
+                events.append((h["name"], "今天摸鱼了一天，什么也没干", "activity"))
+            elif act == "info":
+                info_gain = random.randint(1000, 3000)
+                self._modify_state("funds", info_gain)
+                events.append((h["name"], f"从线人那里搞了点情报卖钱，¥{info_gain}", "activity"))
+            elif act == "social":
+                others = [x for x in self.game_state["hitmen"] if x["id"] != h["id"] and x["status"] == "idle"]
+                if others:
+                    o = random.choice(others)
+                    if random.random() < 0.5:
+                        if o["id"] not in h["friends"]:
+                            h["friends"].append(o["id"])
+                            o["friends"].append(h["id"])
+                        events.append((h["name"], f"和{o['name']}一起喝酒，成了朋友", "activity"))
+                    else:
+                        if o["id"] not in h["rivals"]:
+                            h["rivals"].append(o["id"])
+                            o["rivals"].append(h["id"])
+                        events.append((h["name"], f"和{o['name']}闹翻了，成了对头", "activity"))
+        h["activity_log"].append(act)
+        return events
+
     def end_day(self):
         """结束当天，推进到第二天"""
-        # 保存旧天数用于比较
         old_day = self.game_state["day"]
 
         # 发工资
@@ -620,6 +731,20 @@ class GameEngine:
 
         # 刷新契约板
         self.game_state["contracts"] = self._generate_contracts(3)
+
+        # 杀手自主活动
+        activity_events = self._daily_hitman_activities()
+        activity_narrative = ""
+        if activity_events:
+            activity_narrative = "\n\n📋 组织日志："
+            for name, desc, _ in activity_events:
+                activity_narrative += f"\n  {name}：{desc}"
+
+        # 随机捡人事件
+        encounter = self._random_encounter()
+        encounter_narrative = ""
+        if encounter:
+            encounter_narrative = encounter
 
         # 竞争对手行动
         rival_events = self._rival_turn()
@@ -648,9 +773,17 @@ class GameEngine:
         elif event.get("no_effect"):
             narrative += "\n\n所幸没有重大损失。"
 
+        # 添加杀手活动日志
+        if activity_events:
+            narrative += activity_narrative
+
         # 添加竞争对手动态
         if rival_events:
             narrative += rival_narrative
+
+        # 添加随机捡人事件
+        if encounter_narrative:
+            narrative += encounter_narrative
 
         # 检查游戏结束
         if self.game_state["funds"] <= 0 or self.game_state["reputation"] <= 0:
@@ -895,6 +1028,67 @@ class GameEngine:
                 rival["strength"] += 2
                 events.append((rival["name"], f"扩张了地盘"))
         return events
+
+    # ---- 随机捡人事件 ----
+
+    def _random_encounter(self):
+        """每天有一定概率遇到野生人才，返回叙事文本"""
+        if random.random() > 0.3:
+            return None
+        names = ["流浪刀客", "退役特种兵", "暗网黑客", "街头混混", "神秘女子", "落魄佣兵"]
+        specials = ["近战", "狙击", "黑客", "近战", "潜入", "爆破"]
+        idx = random.randint(0, len(names) - 1)
+        name = names[idx]
+        spec = specials[idx]
+        skill = random.randint(1, 3)
+        cost = 5000 + skill * 3000
+        # 存储到 action_context 供前端 pick up
+        self._action_context["encounter"] = {
+            "name": name,
+            "specialty": spec,
+            "skill": skill,
+            "cost": cost,
+        }
+        return f"\n\n🤝 你在街头遇到了一个有意思的人：{name}（{spec}，战力{skill}）。花 ¥{cost} 可以招募他。"
+
+    def pickup_encounter(self):
+        """捡人"""
+        enc = self._action_context.pop("encounter", None)
+        if not enc:
+            return "没有可以招募的人。"
+        if self.game_state["funds"] < enc["cost"]:
+            return f"资金不够，需要 ¥{enc['cost']}。"
+        if self.game_state["ap"] <= 0:
+            return "行动力不够了。"
+        self._modify_state("funds", -enc["cost"])
+        self._modify_state("ap", -1)
+        new_h = self._generate_hitman(enc["skill"])
+        new_h["name"] = enc["name"]
+        new_h["specialty"] = enc["specialty"]
+        self.game_state["hitmen"].append(new_h)
+        return f"招募成功！{enc['name']} 加入了组织（{enc['specialty']}，战力{enc['skill']}）。"
+
+    def investigate_mole(self, hitman_id: int):
+        """调查杀手是否是内奸"""
+        if self.game_state["ap"] <= 0:
+            return "行动力不够。"
+        hitman = None
+        for h in self.game_state["hitmen"]:
+            if h["id"] == hitman_id:
+                hitman = h
+                break
+        if not hitman:
+            return "找不到这个杀手。"
+        self._modify_state("ap", -1)
+        if hitman["_is_mole"]:
+            if random.random() < 0.7:  # 70% 成功率
+                hitman["_is_mole"] = False
+                owner = hitman.get("mole_owner", "未知组织")
+                return f"调查结果：{hitman['name']} 是{owner}安插的内奸！已清除。"
+            else:
+                return f"调查 {hitman['name']} 没有发现异常……"
+        else:
+            return f"调查 {hitman['name']} 没有发现异常。"
 
     def _call_ai(self, scene_type: str, context: str) -> str:
         """调用 DeepSeek 生成叙事"""
