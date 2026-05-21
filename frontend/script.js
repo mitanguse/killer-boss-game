@@ -586,7 +586,7 @@ async function doEquipWeapon(hitmanId, weaponId) {
     if (!data) return;
     updateStats(data.state);
     appendNarrative(data.narrative, 'system');
-    renderHitmen(data.state);
+    renderHitmen(data.state.hitmen);
 }
 
 async function doUnequipWeapon(hitmanId) {
@@ -595,7 +595,7 @@ async function doUnequipWeapon(hitmanId) {
     if (!data) return;
     updateStats(data.state);
     appendNarrative(data.narrative, 'system');
-    renderHitmen(data.state);
+    renderHitmen(data.state.hitmen);
 }
 
 // --- 结束今天 ---
