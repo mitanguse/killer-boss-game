@@ -104,6 +104,148 @@ TRAINING_OPTIONS = [
 ]
 
 # ============================================================
+# 组织等级系统
+# ============================================================
+
+ORG_LEVELS = [
+    {"level": 1, "name": "街头暗影", "funds_req": 0, "rep_req": 0, "missions_req": 0, "xp_req": 0, "desc": "刚起步的地下势力"},
+    {"level": 2, "name": "区域新秀", "funds_req": 30000, "rep_req": 20, "missions_req": 5, "xp_req": 60, "desc": "在小圈子里有了名号"},
+    {"level": 3, "name": "地下势力", "funds_req": 80000, "rep_req": 40, "missions_req": 15, "xp_req": 150, "desc": "暗面世界正式接纳了你"},
+    {"level": 4, "name": "城市暗流", "funds_req": 150000, "rep_req": 60, "missions_req": 30, "xp_req": 300, "desc": "整座城市都能感受到你的存在"},
+    {"level": 5, "name": "暗夜贵族", "funds_req": 300000, "rep_req": 80, "missions_req": 50, "xp_req": 500, "desc": "你是夜晚的真正主人"},
+    {"level": 6, "name": "幕后操盘", "funds_req": 500000, "rep_req": 100, "missions_req": 80, "xp_req": 800, "desc": "你操纵着城市的命脉"},
+    {"level": 7, "name": "暗影君王", "funds_req": 800000, "rep_req": 120, "missions_req": 120, "xp_req": 1200, "desc": "暗影中的无冕之王"},
+    {"level": 8, "name": "传说", "funds_req": 1200000, "rep_req": 150, "missions_req": 180, "xp_req": 1800, "desc": "你的名字将成为传说"},
+]
+
+# ============================================================
+# 安全屋升级
+# ============================================================
+
+SAFEHOUSE_UPGRADES = [
+    {"id": "training_ground", "name": "训练场", "desc": "训练效果+50%", "base_cost": 20000, "max_lv": 3, "cost_per_lv": 15000},
+    {"id": "medical_room", "name": "医疗室", "desc": "受伤恢复加速", "base_cost": 15000, "max_lv": 3, "cost_per_lv": 10000},
+    {"id": "intel_room", "name": "情报室", "desc": "情报收集增加", "base_cost": 25000, "max_lv": 3, "cost_per_lv": 18000},
+    {"id": "interrogation_room", "name": "审讯室", "desc": "从俘虏获取信息", "base_cost": 20000, "max_lv": 3, "cost_per_lv": 12000},
+]
+
+# ============================================================
+# 合约多方案
+# ============================================================
+
+CONTRACT_PLANS = [
+    {"id": "stealth", "name": "潜入暗杀", "desc": "需潜入专精，成功率+15%，收益正常", "req_spec": "潜入", "success_bonus": 0.15, "reward_mult": 1.0, "infamy": 0},
+    {"id": "sniper", "name": "狙击暗杀", "desc": "需狙击专精，风险低，收益+20%", "req_spec": "狙击", "success_bonus": 0.20, "reward_mult": 1.2, "infamy": 0},
+    {"id": "assault", "name": "正面强攻", "desc": "需近战专精，成功率-10%，收益+50%但恶名增加", "req_spec": "近战", "success_bonus": -0.10, "reward_mult": 1.5, "infamy": 5},
+    {"id": "accident", "name": "制造意外", "desc": "需爆破专精，收益-20%，恶名不增加", "req_spec": "爆破", "success_bonus": 0.0, "reward_mult": 0.8, "infamy": -3},
+]
+
+# ============================================================
+# 阵营声望
+# ============================================================
+
+FACTIONS = {
+    "police": {"name": "警方", "desc": "高→不查你，低→经常突袭", "initial": 50, "max": 100},
+    "gang": {"name": "黑帮", "desc": "高→更多合约，低→被攻击", "initial": 50, "max": 100},
+    "politician": {"name": "政客", "desc": "高→政治庇护，低→被施压", "initial": 50, "max": 100},
+}
+
+# ============================================================
+# 洗钱渠道
+# ============================================================
+
+LAUNDRY_CHANNELS = [
+    {"id": "restaurant", "name": "开餐厅", "cost_per_batch": 5000, "ap_cost": 1, "clean_per_batch": 0.3, "desc": "每消耗¥5000+1AP，洗白30%脏钱"},
+    {"id": "laundry_mat", "name": "洗衣店", "cost_per_batch": 8000, "ap_cost": 1, "clean_per_batch": 0.5, "desc": "每消耗¥8000+1AP，洗白50%脏钱"},
+    {"id": "casino", "name": "地下赌场", "cost_per_batch": 15000, "ap_cost": 2, "clean_per_batch": 0.8, "desc": "每消耗¥15000+2AP，洗白80%脏钱"},
+]
+
+# ============================================================
+# 投资项目
+# ============================================================
+
+INVESTMENT_TYPES = [
+    {"id": "nightclub", "name": "夜总会", "min_invest": 50000, "weekly_return": 0.05, "risk": 0.1, "desc": "每周回报5%，低风险"},
+    {"id": "casino_underground", "name": "地下赌场", "min_invest": 80000, "weekly_return": 0.08, "risk": 0.3, "desc": "每周回报8%，高风险"},
+    {"id": "real_estate", "name": "房产", "min_invest": 100000, "weekly_return": 0.03, "risk": 0.05, "desc": "每周回报3%，极稳定"},
+]
+
+# ============================================================
+# 干部职位
+# ============================================================
+
+CADRE_ROLES = [
+    {"id": "intel_officer", "name": "情报官", "desc": "情报收集量+50%", "bonus_type": "intel"},
+    {"id": "action_commander", "name": "行动队长", "desc": "合约成功率+10%", "bonus_type": "success"},
+    {"id": "tech_expert", "name": "技术专家", "desc": "武器打八折", "bonus_type": "discount"},
+    {"id": "logistics_manager", "name": "后勤主管", "desc": "维护费减少50%", "bonus_type": "maintenance"},
+]
+
+# ============================================================
+# 主线剧情
+# ============================================================
+
+MAIN_STORIES = {
+    2: {
+        "title": "初次交锋",
+        "text": "你的组织引起了其他势力的注意。一个自称「灰鸽」的组织送来了一封警告信——上面画着一只染血的鸽子。\n\n枭深吸一口气：「老板，他们有备而来。」\n\n该如何回应？",
+        "choices": [
+            {"text": "强硬回击——派人去砸他们的场子", "effect": {"reputation": 5, "factions_gang": -5}, "response": "你选择了强硬路线。当晚，灰鸽的赌场被砸了个稀巴烂。消息传开，道上的人都在谈论你的组织。"},
+            {"text": "隐秘观察——先摸清他们的底细再说", "effect": {"reputation": 3, "factions_police": 3}, "response": "选择隐忍是明智的。一周后，枭的情报网挖出了灰鸽的底牌——他们不过是条大鱼抛出的诱饵。"},
+        ],
+    },
+    3: {
+        "title": "神秘委托",
+        "text": "一封没有署名的信被塞进门缝，里面是一张照片和一串地址。照片上是一个你从未见过的符号——一只衔着金币的乌鸦。\n\n枭皱眉：「这单……不太对劲。」\n\n接还是不接？",
+        "choices": [
+            {"text": "接下来——高风险高回报", "effect": {"funds": 30000, "reputation": 8}, "response": "任务出奇地顺利。委托人留下了丰厚的报酬和一封信：「第一次合作愉快。」署名是一个字母：'X'。"},
+            {"text": "拒绝——安全第一", "effect": {"reputation": 2}, "response": "你把信烧掉了。当天夜里，隔壁街的另一个组织接了这单——然后全员失踪。"},
+        ],
+    },
+    4: {
+        "title": "前任的秘密",
+        "text": "在整理前任首领留下的旧物时，你发现了一个暗格。里面有一本日记和一叠照片——前任首领并非死于仇杀，而是被组织内部的人出卖。\n\n照片上，一个你熟悉的身影出现在不该出现的地方……\n\n你该怎么做？",
+        "choices": [
+            {"text": "彻查内鬼——一个都不放过", "effect": {"reputation": 5, "funds": -20000}, "response": "一场血腥的内部清洗开始了。三个叛徒被揪了出来，你的组织因此变得更加纯粹——但也元气大伤。"},
+            {"text": "引以为戒——加强内部管理", "effect": {"reputation": 3, "factions_politician": 5}, "response": "你没有大动干戈，而是悄悄改革了组织的管理流程。枭赞许地点了点头：「老板长大了。」"},
+        ],
+    },
+    5: {
+        "title": "暗影议会的邀请",
+        "text": "一张烫金请柬送到了你的桌上。城市的暗面统治者——暗影议会——希望与你见面。\n\n地点在城郊一座废弃教堂的地下室。去，意味着正式进入权力核心；不去，意味着你的天花板就在这里。\n\n枭看着你，等待你的决定。",
+        "choices": [
+            {"text": "赴约——进入权力核心", "effect": {"reputation": 10, "funds": 50000}, "response": "你走入了那座教堂。黑暗中，七张面具后的眼睛注视着你。『欢迎加入游戏。』暗影议会的领袖伸出了手。"},
+            {"text": "拒绝——保持独立", "effect": {"reputation": 5, "factions_gang": 10}, "response": "你拒绝了邀请。暗影议会没有动怒——反而对你产生了兴趣。一个不靠任何人上位的组织，值得拉拢。"},
+        ],
+    },
+    6: {
+        "title": "城市议会选举",
+        "text": "城市议会选举在即。三位候选人各自派来了使者，希望获得你的支持——或者说，希望你不要支持他们的对手。\n\n你的选择将影响整座城市的权力格局。",
+        "choices": [
+            {"text": "支持改革派候选人（警方声望+20）", "effect": {"factions_police": 20, "funds": -30000, "reputation": 5}, "response": "改革派候选人上台后，警方对你的组织睁一只眼闭一只眼。当然，每年'意思'一下还是要的。"},
+            {"text": "支持黑帮背景的候选人（黑帮声望+20）", "effect": {"factions_gang": 20, "funds": 40000, "reputation": 3}, "response": "黑帮背景的候选人上台后，城中地下交易更加猖獗。你的生意比任何时候都好做。"},
+        ],
+    },
+    7: {
+        "title": "国家机器的清剿",
+        "text": "风声突然收紧。国安部门成立了一个特别行动组，专门针对你这样的高层次地下组织。好几个城市的大人物已经落网。\n\n枭递来一张机票：「老板，该做选择了。」",
+        "choices": [
+            {"text": "暂避风头——转移到新城市发展", "effect": {"reputation": -10, "funds": -100000}, "response": "你带着核心班底转移到了临市。风头过了再回来。老巢虽然空了，但人还在——一切都可以重来。"},
+            {"text": "花钱消灾——买通关键人物", "effect": {"funds": -150000, "reputation": 5, "factions_politician": 15}, "response": "金钱是最好的通行证。国安特别行动组的组长在一次'偶然'的澳门之旅后，对你的调查被悄悄搁置了。"},
+        ],
+    },
+    8: {
+        "title": "终极抉择",
+        "text": "你站在了城市之巅。暗影王座上，你能看到整座城市的灯火——那些灯火之下，都是你的地盘。\n\n但坐在这个位置上，你必须做一个终极抉择。",
+        "choices": [
+            {"text": "霸权之路——吞并所有对手，成为暗面唯一主宰", "effect": {}, "response": "你发动了全面战争。一个月内，所有对手都被碾碎。代价是伤亡惨重，但从此以后，这座城市只有一个名字在暗面流传——你的名字。结局：💰 霸权", "ending": "霸权"},
+            {"text": "传奇之路——金盆洗手，留下不朽传说", "effect": {}, "response": "你在巅峰时刻选择了急流勇退。江湖上从此只有你的传说。十年后，有人写了一本书，名字叫《暗影之王》。结局：📖 传奇", "ending": "传奇"},
+            {"text": "隐秘之路——转入更深的地下，成为真正的幕后操盘手", "effect": {}, "response": "你解散了表面的一切，转入更深的地下。从此没有人能找到你，但每个重大决策背后，都有你的影子。结局：🎭 隐秘", "ending": "隐秘"},
+        ],
+    },
+}
+
+# ============================================================
 # 竞争对手数据
 # ============================================================
 
@@ -175,10 +317,16 @@ class GameEngine:
         )
         self.system_prompt = system_prompt
         self._weapon_id_counter = 100
-        self.game_state = {
+        self._total_missions_completed = 0
+        self.game_state = self._default_state()
+        self._action_context = {}
+        self.used_names = set()
+
+    def _default_state(self):
+        return {
             "funds": 50000,
             "reputation": 10,
-            "max_reputation": 100,
+            "max_reputation": 200,
             "ap": 3,
             "max_ap": 3,
             "day": 1,
@@ -188,29 +336,47 @@ class GameEngine:
             "rivals": self._generate_rivals(),
             "history": [],
             "game_over": False,
+            # 组织等级
+            "org_level": 1,
+            "org_xp": 0,
+            "org_level_name": "街头暗影",
+            # 安全屋
+            "safehouse": {
+                "training_ground": 0,
+                "medical_room": 0,
+                "intel_room": 0,
+                "interrogation_room": 0,
+            },
+            # 阵营声望
+            "factions": {
+                "police": {"value": 50, "max": 100},
+                "gang": {"value": 50, "max": 100},
+                "politician": {"value": 50, "max": 100},
+            },
+            # 洗钱
+            "dirty_money": 0,
+            # 投资
+            "investments": [],
+            # 干部
+            "cadres": {
+                "intel_officer": None,
+                "action_commander": None,
+                "tech_expert": None,
+                "logistics_manager": None,
+            },
+            # 主线剧情标记
+            "main_story_flags": {},
+            # 游戏结局
+            "ending": None,
         }
-        self._action_context = {}
-        self.used_names = set()
 
     # ---- 状态管理 ----
 
     def reset_game(self):
         self._weapon_id_counter = 100
         self._npc_leaderboard = []
-        self.game_state = {
-            "funds": 50000,
-            "reputation": 10,
-            "max_reputation": 100,
-            "ap": 3,
-            "max_ap": 3,
-            "day": 1,
-            "hitmen": [],
-            "contracts": [],
-            "weapons": self._generate_weapons(8),
-            "rivals": self._generate_rivals(),
-            "history": [],
-            "game_over": False,
-        }
+        self._total_missions_completed = 0
+        self.game_state = self._default_state()
         self._action_context = {}
         self._weapon_id_counter = 100
         self.used_names = set()
@@ -230,6 +396,8 @@ class GameEngine:
             f"声望：{s['reputation']}/{s['max_reputation']}",
             f"行动力：{s['ap']}/{s['max_ap']}",
             f"杀手数量：{len(s['hitmen'])} 人",
+            f"组织等级：{s['org_level_name']} (Lv.{s['org_level']})",
+            f"组织经验：{s['org_xp']}",
         ]
         if s["hitmen"]:
             lines.append("杀手列表：")
@@ -277,9 +445,13 @@ class GameEngine:
             "status": "idle",
             "friends": [],
             "rivals": [],
-            "_is_mole": random.random() < 0.15,  # 15%概率是内奸
-            "mole_owner": None,  # 内奸属于哪个对手
-            "activity_log": [],  # 每天的自主活动记录
+            "_is_mole": random.random() < 0.15,
+            "mole_owner": None,
+            "activity_log": [],
+            # 个人档案
+            "mission_history": [],
+            "legend_title": None,
+            "epitaph": None,
         }
 
     def _generate_contracts(self, count=3):
@@ -329,14 +501,12 @@ class GameEngine:
         hitmen = self.game_state["hitmen"]
         if not hitmen:
             return None
-        # 忠诚度低的更容易被挖
         targets = [m for m in hitmen if m["loyalty"] <= 5]
         if not targets:
             return None
-        if random.random() < 0.4:  # 40%概率触发
+        if random.random() < 0.4:
             target = random.choice(targets)
             if random.random() < (0.6 - target["loyalty"] * 0.1):
-                # 被挖走了
                 self.game_state["hitmen"].remove(target)
                 return target
         return None
@@ -346,11 +516,9 @@ class GameEngine:
         event_template = random.choice(EVENTS)
         event = dict(event_template)
 
-        # 应用效果
         for key, val in event["effect"].items():
             self._modify_state(key, val)
 
-        # 特别事件处理
         if event.get("special") == "poach_check":
             poached = self._check_poach()
             if poached:
@@ -389,7 +557,7 @@ class GameEngine:
 
         save_data = {
             "slot": slot,
-            "timestamp": str(Path(__file__).stat().st_mtime),  # 写死的兼容写法
+            "timestamp": str(Path(__file__).stat().st_mtime),
             "state": self.game_state,
             "used_names": list(self.used_names),
         }
@@ -445,7 +613,7 @@ class GameEngine:
         return narrative
 
     def show_recruit_candidates(self):
-        """显示可招募的候选人（直接返回，不调 AI）"""
+        """显示可招募的候选人"""
         if self.game_state["ap"] <= 0:
             return None, "今天的行动力已经用完了，明天再来招募吧。"
         candidates = getattr(self, '_pregen_candidates', [])
@@ -472,7 +640,6 @@ class GameEngine:
         if self.game_state["ap"] <= 0:
             return "今天的行动力不够了。", None
 
-        # 扣钱、加人、扣AP
         self._modify_state("funds", -cost)
         self._modify_state("ap", -1)
 
@@ -494,15 +661,16 @@ class GameEngine:
             "_is_mole": random.random() < 0.15,
             "mole_owner": None,
             "activity_log": [],
+            "mission_history": [],
+            "legend_title": None,
+            "epitaph": None,
         }
 
-        # 内奸分配对手
         if new_hitman["_is_mole"]:
             alive = [r for r in self.game_state["rivals"] if r["alive"]]
             if alive:
                 new_hitman["mole_owner"] = random.choice(alive)["name"]
 
-        # 建立关系网
         existing = [m for m in self.game_state["hitmen"] if m["id"] != new_hitman["id"]]
         for other in existing:
             if random.random() < 0.4:
@@ -522,7 +690,7 @@ class GameEngine:
         return narrative, new_hitman
 
     def show_contracts(self):
-        """展示当前契约板（直接返回，不调 AI）"""
+        """展示当前契约板"""
         contracts = self.game_state["contracts"]
         available = [c for c in contracts if not c.get("taken")]
         if not available:
@@ -531,8 +699,8 @@ class GameEngine:
         narrative += f"当前有 {len(available)} 个可用契约，难度从简单到致命不等。"
         return available, narrative
 
-    def assign_contract(self, contract_index=None, hitman_id=None, contract_id=None):
-        """派遣杀手执行契约"""
+    def assign_contract(self, contract_index=None, hitman_id=None, contract_id=None, plan_id=None):
+        """派遣杀手执行契约（支持多方案）"""
         contracts = self.game_state["contracts"]
         if contract_id is not None:
             contract = None
@@ -552,6 +720,7 @@ class GameEngine:
             return "这个契约已经被执行了。", False
 
         # 找杀手
+        hitman = None
         for h in self.game_state["hitmen"]:
             if h["id"] == hitman_id and h["status"] == "idle":
                 hitman = h
@@ -565,6 +734,32 @@ class GameEngine:
         if self.game_state["reputation"] < contract["reputation_req"]:
             return f"声望不够，需要有 {contract['reputation_req']} 声望才能接这个契约。", False
 
+        # 方案加成（Lv3解锁）
+        plan_mult = 1.0
+        plan_success_bonus = 0.0
+        plan_infamy = 0
+        org_level = self.game_state["org_level"]
+
+        if plan_id and org_level >= 3:
+            plan = None
+            for p in CONTRACT_PLANS:
+                if p["id"] == plan_id:
+                    plan = p
+                    break
+            if plan:
+                # 检查专长匹配
+                if hitman["specialty"] == plan["req_spec"]:
+                    plan_mult = plan["reward_mult"]
+                    plan_success_bonus = plan["success_bonus"]
+                    plan_infamy = plan.get("infamy", 0)
+                # 不匹配也可以用，但无加成
+
+        # 干部加成
+        cadre_bonus = 0
+        if self.game_state["cadres"]["action_commander"]:
+            # 有行动队长，成功率+10%
+            cadre_bonus = 0.10
+
         # 扣AP
         self._modify_state("ap", -1)
 
@@ -575,47 +770,88 @@ class GameEngine:
         diff_penalty = {"简单": 0, "中等": -0.1, "困难": -0.25, "致命": -0.4}
         penalty = diff_penalty.get(contract["difficulty"], 0)
 
-        success_rate = base_success + specialty_bonus + skill_bonus + penalty
+        success_rate = base_success + specialty_bonus + skill_bonus + penalty + plan_success_bonus + cadre_bonus
         success_rate = max(0.1, min(0.95, success_rate))
 
         diced = random.random()
         success = diced < success_rate
 
+        # 实际报酬
+        actual_reward = int(contract["reward"] * plan_mult)
+
         # 更新状态
         contract["taken"] = True
         if success:
-            self._modify_state("funds", contract["reward"])
+            # 50%是脏钱（需要洗白）
+            dirty_money = int(actual_reward * 0.5)
+            clean_money = actual_reward - dirty_money
+            self._modify_state("funds", clean_money)
+            self.game_state["dirty_money"] = self.game_state.get("dirty_money", 0) + dirty_money
+
             rep_gain = {"简单": 2, "中等": 4, "困难": 7, "致命": 12}
             self._modify_state("reputation", rep_gain.get(contract["difficulty"], 3))
             hitman["status"] = "idle"
-            # 任务经验
             exp_gain = {"简单": 20, "中等": 40, "困难": 80, "致命": 150}
             hitman["exp"] = hitman.get("exp", 0) + exp_gain.get(contract["difficulty"], 20)
             hitman["missions_completed"] = hitman.get("missions_completed", 0) + 1
+            # 记录任务历史
+            if "mission_history" not in hitman:
+                hitman["mission_history"] = []
+            hitman["mission_history"].append({
+                "contract": contract["name"],
+                "difficulty": contract["difficulty"],
+                "result": "success",
+                "reward": actual_reward,
+                "plan": plan_id or "standard",
+                "day": self.game_state["day"],
+            })
             self._check_level_up(hitman)
-            # 忠诚度可能上升
+            # 检查传奇称号（Lv8功能）
+            self._check_legend_title(hitman)
             if random.random() < 0.3:
                 hitman["loyalty"] = min(10, hitman["loyalty"] + 1)
+
+            # 组织经验（成功合约增加org_xp）
+            org_xp_gain = {"简单": 5, "中等": 10, "困难": 20, "致命": 40}
+            self.game_state["org_xp"] = self.game_state.get("org_xp", 0) + org_xp_gain.get(contract["difficulty"], 5)
+            self._total_missions_completed += 1
         else:
             rep_loss = {"简单": -1, "中等": -2, "困难": -4, "致命": -8}
             self._modify_state("reputation", rep_loss.get(contract["difficulty"], -2))
-            # 杀手可能受伤
             if random.random() < 0.5:
                 hitman["status"] = "injured"
             else:
                 hitman["status"] = "idle"
+            if "mission_history" not in hitman:
+                hitman["mission_history"] = []
+            hitman["mission_history"].append({
+                "contract": contract["name"],
+                "difficulty": contract["difficulty"],
+                "result": "failed",
+                "reward": 0,
+                "plan": plan_id or "standard",
+                "day": self.game_state["day"],
+            })
 
-        # 生成叙事
-        context = (
+        # 阵营变动
+        if plan_infamy > 0:
+            self._modify_faction("police", -plan_infamy)
+        elif plan_infamy < 0:
+            self._modify_faction("police", -plan_infamy)  # 制造意外警方查不到
+
+        narrative_context = (
             f"派遣{hitman['name']}执行契约「{contract['name']}」"
             f"（难度：{contract['difficulty']}，所需专长：{contract['required_specialty']}，"
             f"杀手专长：{hitman['specialty']}，成功率：{success_rate:.0%}）"
             f"结果：{'✅ 成功' if success else '❌ 失败'}，"
-            f"获得报酬：¥{contract['reward'] if success else 0}"
+            f"获得报酬：¥{actual_reward if success else 0}"
         )
-        narrative = self._call_ai("assign_contract", context)
+        if plan_id and org_level >= 3:
+            plan = next((p for p in CONTRACT_PLANS if p["id"] == plan_id), None)
+            if plan:
+                narrative_context += f"，执行方案：{plan['name']}"
+        narrative = self._call_ai("assign_contract", narrative_context)
 
-        # 检查游戏结束
         if self.game_state["reputation"] <= 0:
             game_over_narrative = self._call_ai("game_over", "声望归零，组织覆灭")
             self.game_state["game_over"] = True
@@ -635,26 +871,510 @@ class GameEngine:
                 break
         if not hitman:
             return "找不到这个杀手。"
-
         if hitman["status"] == "on_mission":
             return "这个杀手正在执行任务，不能解雇。"
-
-        # 内奸直接开除，不耗AP（但损失声望）
+        # 如果是干部，先解职
+        for role_id, assigned_id in self.game_state["cadres"].items():
+            if assigned_id == hitman_id:
+                self.game_state["cadres"][role_id] = None
         self.game_state["hitmen"].remove(hitman)
         reputation_change = -hitman["skill"]
         self._modify_state("reputation", reputation_change)
-
         narrative = self._call_ai(
             "fire_result",
             f"解雇了杀手{hitman['name']}（{hitman['specialty']}，战力{hitman['skill']}）"
         )
         return narrative
 
+    # ---- 组织等级系统 ----
+
+    def check_org_upgrade(self):
+        """检查组织是否可以升级，返回升级信息或None"""
+        s = self.game_state
+        current_level = s["org_level"]
+        if current_level >= 8:
+            return None  # 满级
+
+        next_level_info = None
+        for lv_info in ORG_LEVELS:
+            if lv_info["level"] == current_level + 1:
+                next_level_info = lv_info
+                break
+
+        if not next_level_info:
+            return None
+
+        # 检查条件
+        if (s["funds"] >= next_level_info["funds_req"] and
+            s["reputation"] >= next_level_info["rep_req"] and
+            self._total_missions_completed >= next_level_info["missions_req"] and
+            s["org_xp"] >= next_level_info["xp_req"]):
+
+            # 升级！
+            s["org_level"] = next_level_info["level"]
+            s["org_level_name"] = next_level_info["name"]
+
+            # 升级奖励
+            upgrade_bonus = {
+                2: {"funds": 10000},
+                3: {"funds": 20000, "reputation": 5},
+                4: {"funds": 40000, "reputation": 5},
+                5: {"funds": 60000, "reputation": 10},
+                6: {"funds": 80000, "reputation": 10},
+                7: {"funds": 100000, "reputation": 15},
+                8: {"funds": 150000, "reputation": 20},
+            }
+            bonus = upgrade_bonus.get(next_level_info["level"], {})
+            for k, v in bonus.items():
+                self._modify_state(k, v)
+
+            return {
+                "old_level": current_level,
+                "new_level": next_level_info["level"],
+                "new_name": next_level_info["name"],
+                "desc": next_level_info["desc"],
+                "bonus": bonus,
+            }
+        return None
+
+    def get_org_level_info(self):
+        """获取组织等级信息"""
+        return {
+            "level": self.game_state["org_level"],
+            "name": self.game_state["org_level_name"],
+            "xp": self.game_state["org_xp"],
+            "levels": ORG_LEVELS,
+        }
+
+    # ---- 安全屋系统（Lv2解锁） ----
+
+    def show_safehouse_upgrades(self):
+        """显示安全屋升级选项"""
+        if self.game_state["org_level"] < 2:
+            return [], "组织等级不够（需要Lv.2区域新秀），枭还没找到合适的地方建安全屋。"
+
+        upgrades = []
+        for u in SAFEHOUSE_UPGRADES:
+            current_lv = self.game_state["safehouse"].get(u["id"], 0)
+            if current_lv < u["max_lv"]:
+                cost = u["base_cost"] + current_lv * u["cost_per_lv"]
+                upgrades.append({
+                    "id": u["id"],
+                    "name": u["name"],
+                    "desc": u["desc"],
+                    "current_lv": current_lv,
+                    "max_lv": u["max_lv"],
+                    "next_lv": current_lv + 1,
+                    "cost": cost,
+                })
+        return upgrades, "枭展开了一卷安全屋改造蓝图。"
+
+    def upgrade_safehouse(self, upgrade_id: str):
+        """升级安全屋"""
+        if self.game_state["org_level"] < 2:
+            return "组织等级不够。"
+
+        upgrade = None
+        for u in SAFEHOUSE_UPGRADES:
+            if u["id"] == upgrade_id:
+                upgrade = u
+                break
+        if not upgrade:
+            return "无效的升级项目。"
+
+        current_lv = self.game_state["safehouse"].get(upgrade_id, 0)
+        if current_lv >= upgrade["max_lv"]:
+            return f"{upgrade['name']} 已经满级了。"
+
+        cost = upgrade["base_cost"] + current_lv * upgrade["cost_per_lv"]
+        if self.game_state["funds"] < cost:
+            return f"资金不够，需要 ¥{cost}。"
+
+        if self.game_state["ap"] <= 0:
+            return "行动力不够。"
+
+        self._modify_state("funds", -cost)
+        self._modify_state("ap", -1)
+        self.game_state["safehouse"][upgrade_id] = current_lv + 1
+
+        # 安全屋效果
+        effects = []
+        if upgrade_id == "training_ground":
+            effects.append("训练效果 +50%")
+        elif upgrade_id == "medical_room":
+            effects.append("受伤恢复加速")
+        elif upgrade_id == "intel_room":
+            effects.append("情报收集增加")
+        elif upgrade_id == "interrogation_room":
+            effects.append("可以审讯俘虏了")
+
+        return f"{upgrade['name']} 升级到Lv.{current_lv + 1}！{'，'.join(effects)} 消耗 ¥{cost}。"
+
+    # ---- 合约多方案（Lv3解锁） ----
+
+    def get_contract_plans(self, hitman_id: int, contract_index: int = None):
+        """获取可用方案列表"""
+        if self.game_state["org_level"] < 3:
+            return []  # Lv3以下不展示方案
+
+        hitman = None
+        for h in self.game_state["hitmen"]:
+            if h["id"] == hitman_id:
+                hitman = h
+                break
+        if not hitman:
+            return []
+
+        plans = []
+        for p in CONTRACT_PLANS:
+            is_match = hitman["specialty"] == p["req_spec"]
+            plans.append({
+                "id": p["id"],
+                "name": p["name"],
+                "desc": p["desc"],
+                "is_available": is_match,
+                "success_bonus": p["success_bonus"],
+                "reward_mult": p["reward_mult"],
+            })
+        return plans
+
+    # ---- 阵营声望系统（Lv4解锁） ----
+
+    def get_factions(self):
+        """获取阵营声望状态"""
+        if self.game_state["org_level"] < 4:
+            return None, "组织等级不够（需要Lv.4城市暗流）。"
+        return self.game_state["factions"], None
+
+    def _modify_faction(self, faction_id: str, amount: int):
+        """修改阵营声望"""
+        if faction_id not in self.game_state["factions"]:
+            return
+        faction = self.game_state["factions"][faction_id]
+        faction["value"] = max(0, min(faction["max"], faction["value"] + amount))
+
+    # ---- 洗钱系统（Lv4解锁） ----
+
+    def show_laundry_options(self):
+        """显示洗钱选项"""
+        if self.game_state["org_level"] < 4:
+            return [], "组织等级不够（需要Lv.4城市暗流）。"
+
+        dirty = self.game_state.get("dirty_money", 0)
+        if dirty <= 0:
+            return [], "老板，最近账很干净，没有脏钱需要处理。"
+
+        options = []
+        for ch in LAUNDRY_CHANNELS:
+            can_afford_cost = self.game_state["funds"] >= ch["cost_per_batch"]
+            can_afford_ap = self.game_state["ap"] >= ch["ap_cost"]
+            can_use = can_afford_cost and can_afford_ap
+            clean_amount = int(dirty * ch["clean_per_batch"])
+            options.append({
+                "id": ch["id"],
+                "name": ch["name"],
+                "desc": ch["desc"],
+                "cost": ch["cost_per_batch"],
+                "ap_cost": ch["ap_cost"],
+                "clean_amount": clean_amount,
+                "can_use": can_use,
+            })
+        return options, f"枭递上账本：'老板，账上有 ¥{dirty} 脏钱需要处理。'"
+
+    def do_laundry(self, channel_id: str):
+        """执行洗钱"""
+        if self.game_state["org_level"] < 4:
+            return "组织等级不够。"
+
+        channel = None
+        for ch in LAUNDRY_CHANNELS:
+            if ch["id"] == channel_id:
+                channel = ch
+                break
+        if not channel:
+            return "无效的洗钱渠道。"
+
+        dirty = self.game_state.get("dirty_money", 0)
+        if dirty <= 0:
+            return "没有脏钱需要洗。"
+
+        if self.game_state["funds"] < channel["cost_per_batch"]:
+            return f"资金不够，需要 ¥{channel['cost_per_batch']} 作为运营成本。"
+
+        if self.game_state["ap"] < channel["ap_cost"]:
+            return "行动力不够。"
+
+        clean_amount = int(dirty * channel["clean_per_batch"])
+        actual_clean = min(clean_amount, dirty)
+
+        self._modify_state("funds", -channel["cost_per_batch"])
+        self._modify_state("ap", -channel["ap_cost"])
+        self.game_state["dirty_money"] = dirty - actual_clean
+        self._modify_state("funds", actual_clean)
+
+        return f"通过{channel['name']}洗白了 ¥{actual_clean}，消耗 ¥{channel['cost_per_batch']}+{channel['ap_cost']}AP。剩余脏钱：¥{self.game_state['dirty_money']}。"
+
+    # ---- 投资系统（Lv6解锁） ----
+
+    def show_investments(self):
+        """显示投资选项"""
+        if self.game_state["org_level"] < 6:
+            return [], None, "组织等级不够（需要Lv.6幕后操盘）。"
+
+        existing = self.game_state.get("investments", [])
+        return INVESTMENT_TYPES, existing, None
+
+    def make_investment(self, invest_id: str):
+        """进行投资"""
+        if self.game_state["org_level"] < 6:
+            return "组织等级不够。"
+
+        invest_type = None
+        for inv in INVESTMENT_TYPES:
+            if inv["id"] == invest_id:
+                invest_type = inv
+                break
+        if not invest_type:
+            return "无效的投资项目。"
+
+        cost = invest_type["min_invest"]
+        if self.game_state["funds"] < cost:
+            return f"资金不够，{invest_type['name']} 最少需要 ¥{cost}。"
+
+        if self.game_state["ap"] <= 0:
+            return "行动力不够。"
+
+        self._modify_state("funds", -cost)
+        self._modify_state("ap", -1)
+
+        if "investments" not in self.game_state:
+            self.game_state["investments"] = []
+
+        self.game_state["investments"].append({
+            "id": invest_type["id"],
+            "name": invest_type["name"],
+            "amount": cost,
+            "week_return": invest_type["weekly_return"],
+            "risk": invest_type["risk"],
+            "weeks_active": 0,
+        })
+
+        return f"投资成功！{invest_type['name']}（¥{cost}），每周预定回报率 {invest_type['weekly_return']*100:.0f}%。"
+
+    def _process_investments(self):
+        """处理每周投资回报"""
+        if self.game_state["org_level"] < 6:
+            return []
+
+        results = []
+        investments = self.game_state.get("investments", [])
+        for inv in investments[:]:  # 复制列表遍历
+            inv["weeks_active"] += 1
+            # 检查被查封风险
+            if random.random() < inv["risk"] * 0.1:  # 每轮风险
+                refund = int(inv["amount"] * 0.5)  # 查封退回50%
+                self._modify_state("funds", refund)
+                investments.remove(inv)
+                results.append(f"⚠️ {inv['name']} 被查封了！退回 ¥{refund}。")
+                continue
+
+            # 回报
+            return_amount = int(inv["amount"] * inv["week_return"])
+            self._modify_state("funds", return_amount)
+            results.append(f"💹 {inv['name']} 带来 ¥{return_amount} 回报。")
+
+        return results
+
+    # ---- 干部系统（Lv5解锁） ----
+
+    def show_cadres(self):
+        """显示干部信息"""
+        if self.game_state["org_level"] < 5:
+            return None, "组织等级不够（需要Lv.5暗夜贵族）。"
+
+        cadres_info = {}
+        for role in CADRE_ROLES:
+            hitman_id = self.game_state["cadres"].get(role["id"])
+            hitman = None
+            if hitman_id:
+                for h in self.game_state["hitmen"]:
+                    if h["id"] == hitman_id:
+                        hitman = h
+                        break
+            cadres_info[role["id"]] = {
+                "role": role,
+                "current": hitman,
+                "assigned": hitman_id is not None,
+            }
+
+        return cadres_info, "枭递来组织架构表：'老板，干部位置还空着几个。'"
+
+    def appoint_cadre(self, role_id: str, hitman_id: int):
+        """任命干部"""
+        if self.game_state["org_level"] < 5:
+            return "组织等级不够。"
+
+        # 检查角色
+        role = None
+        for r in CADRE_ROLES:
+            if r["id"] == role_id:
+                role = r
+                break
+        if not role:
+            return "无效的干部职位。"
+
+        # 检查杀手
+        hitman = None
+        for h in self.game_state["hitmen"]:
+            if h["id"] == hitman_id:
+                hitman = h
+                break
+        if not hitman:
+            return "找不到这个杀手。"
+
+        # 检查是否已被任命其他职位
+        for rid, hid in self.game_state["cadres"].items():
+            if hid == hitman_id and rid != role_id:
+                return f"{hitman['name']} 已经是其他干部职位了。"
+
+        # 任命
+        self.game_state["cadres"][role_id] = hitman_id
+        return f"{hitman['name']} 被任命为{role['name']}！{role['desc']}"
+
+    def remove_cadre(self, role_id: str):
+        """解除干部职务"""
+        if role_id not in self.game_state["cadres"]:
+            return "无效的干部职位。"
+        self.game_state["cadres"][role_id] = None
+        role_name = next((r["name"] for r in CADRE_ROLES if r["id"] == role_id), "未知职位")
+        return f"{role_name} 已被解除职务。"
+
+    # ---- 杀手个人档案（Lv8解锁） ----
+
+    def get_hitman_profile(self, hitman_id: int):
+        """获取杀手个人档案"""
+        hitman = None
+        for h in self.game_state["hitmen"]:
+            if h["id"] == hitman_id:
+                hitman = h
+                break
+        if not hitman:
+            return None
+
+        # 计算传奇级别
+        missions = hitman.get("missions_completed", 0)
+        legend_titles = [
+            (10, "新血"),
+            (25, "利刃"),
+            (50, "王牌"),
+            (100, "传奇"),
+            (200, "活着的传说"),
+        ]
+        legend_title = None
+        for count, title in legend_titles:
+            if missions >= count:
+                legend_title = title
+        if not legend_title:
+            legend_title = "新手"
+
+        return {
+            "id": hitman["id"],
+            "name": hitman["name"],
+            "specialty": hitman["specialty"],
+            "skill": hitman["skill"],
+            "lv": hitman.get("lv", 1),
+            "loyalty": hitman["loyalty"],
+            "missions_completed": missions,
+            "legend_title": legend_title,
+            "epitaph": hitman.get("epitaph"),
+            "mission_history": hitman.get("mission_history", []),
+            "status": hitman["status"],
+            "weapon_id": hitman.get("weapon_id"),
+            "friends": hitman.get("friends", []),
+            "rivals": hitman.get("rivals", []),
+        }
+
+    def _check_legend_title(self, hitman):
+        """检查并更新传奇称号"""
+        missions = hitman.get("missions_completed", 0)
+        titles = {
+            10: "新血",
+            25: "利刃",
+            50: "王牌",
+            100: "传奇",
+            200: "活着的传说",
+        }
+        for count, title in titles.items():
+            if missions == count:
+                hitman["legend_title"] = title
+                return title
+        return None
+
+    # ---- 主线剧情（依次触发） ----
+
+    def check_main_story(self):
+        """检查是否有主线剧情触发，返回剧情数据或None"""
+        org_level = self.game_state["org_level"]
+        flags = self.game_state.get("main_story_flags", {})
+
+        if str(org_level) in flags:
+            return None  # 已经触发过了
+
+        if org_level in MAIN_STORIES:
+            story = MAIN_STORIES[org_level]
+            flags[str(org_level)] = "triggered"
+            return {
+                "level": org_level,
+                "title": story["title"],
+                "text": story["text"],
+                "choices": story["choices"],
+            }
+        return None
+
+    def resolve_main_story(self, level: int, choice_index: int):
+        """处理主线剧情选择"""
+        story = MAIN_STORIES.get(level)
+        if not story:
+            return "未知的剧情节点。", None
+
+        if choice_index < 0 or choice_index >= len(story["choices"]):
+            return "无效的选择。", None
+
+        choice = story["choices"][choice_index]
+        # 应用效果
+        for key, val in choice["effect"].items():
+            if key == "funds":
+                self._modify_state("funds", val)
+            elif key == "reputation":
+                self._modify_state("reputation", val)
+            elif key.startswith("factions_"):
+                faction_id = key.replace("factions_", "")
+                self._modify_faction(faction_id, val)
+            else:
+                self._modify_state(key, val)
+
+        # 处理结局
+        if "ending" in choice:
+            self.game_state["ending"] = choice["ending"]
+            self.game_state["game_over"] = True
+
+        return choice["response"], choice.get("ending")
+
     # ---- 杀手自主活动 ----
 
     def _daily_hitman_activities(self):
         """每个空闲杀手每天随机活动，返回事件列表"""
         events = []
+        # 医疗室效果：加快恢复
+        med_lv = self.game_state["safehouse"].get("medical_room", 0)
+        for h in self.game_state["hitmen"]:
+            if h["status"] == "injured":
+                # 医疗室加速恢复
+                if med_lv > 0 and random.random() < 0.5 + med_lv * 0.15:
+                    h["status"] = "idle"
+                    events.append((h["name"], f"在医疗室休养后康复了", "activity"))
+                    continue
+
         for h in self.game_state["hitmen"]:
             if h["status"] != "idle":
                 continue
@@ -667,8 +1387,9 @@ class GameEngine:
                     events.append((h["name"], f"偷偷挪用了 ¥{loss} 组织资金（内奸）", "mole"))
                 elif sab == "sabotage":
                     if self.game_state["weapons"]:
-                        w = random.choice([x for x in self.game_state["weapons"] if x["owned"]])
-                        if w:
+                        owned = [x for x in self.game_state["weapons"] if x["owned"]]
+                        if owned:
+                            w = random.choice(owned)
                             w["owned"] = False
                             w["equipped_by"] = None
                             events.append((h["name"], f"破坏并遗失了武器「{w['name']}」（内奸）", "mole"))
@@ -678,7 +1399,6 @@ class GameEngine:
                 h["activity_log"].append("内奸活动")
                 continue
 
-            # 正常自主活动
             act = random.choices(
                 ["drink", "fight", "gamble", "train", "lazy", "info", "social"],
                 weights=[25, 10, 15, 10, 20, 10, 10]
@@ -715,7 +1435,9 @@ class GameEngine:
             elif act == "lazy":
                 events.append((h["name"], "今天摸鱼了一天，什么也没干", "activity"))
             elif act == "info":
-                info_gain = random.randint(1000, 3000)
+                # 情报室加成
+                intel_bonus = self.game_state["safehouse"].get("intel_room", 0) * 1000
+                info_gain = random.randint(1000, 3000) + intel_bonus
                 self._modify_state("funds", info_gain)
                 events.append((h["name"], f"从线人那里搞了点情报卖钱，¥{info_gain}", "activity"))
             elif act == "social":
@@ -740,7 +1462,7 @@ class GameEngine:
         old_day = self.game_state["day"]
 
         # 发工资
-        total_salary = 0  # 佣金制：取消固定工资
+        total_salary = 0
         salary_narrative = ""
         if total_salary > 0:
             self._modify_state("funds", -total_salary)
@@ -753,14 +1475,19 @@ class GameEngine:
             self._modify_state("funds", territory_income)
             salary_narrative += f" 地盘收入 +¥{territory_income}。"
 
-        # 触发随机事件        # 触发随机事件
+        # 触发随机事件
         event = self._trigger_random_event()
         event_narrative_hint = event.get("narrative_hint", "")
 
-        # 恢复受伤杀手
+        # 恢复受伤杀手（医疗室加速）
+        med_lv = self.game_state["safehouse"].get("medical_room", 0)
         for h in self.game_state["hitmen"]:
             if h["status"] == "injured":
-                h["status"] = "idle"
+                if med_lv > 0:
+                    h["status"] = "idle"  # 有医疗室直接恢复
+                else:
+                    if random.random() < 0.5:
+                        h["status"] = "idle"
 
         # 刷新契约板
         self.game_state["contracts"] = self._generate_contracts(3)
@@ -792,6 +1519,24 @@ class GameEngine:
             for name, action in rival_events:
                 rival_narrative += f"\n  {name} {action}"
 
+        # 处理投资回报（每7天算一周）
+        invest_narrative = ""
+        if self.game_state["day"] % 7 == 0:
+            invest_results = self._process_investments()
+            if invest_results:
+                invest_narrative = "\n\n💹 投资回报："
+                for r in invest_results:
+                    invest_narrative += f"\n  {r}"
+
+        # 检查组织升级
+        upgrade_info = self.check_org_upgrade()
+        upgrade_narrative = ""
+        if upgrade_info:
+            bonus_text = ""
+            for k, v in upgrade_info.get("bonus", {}).items():
+                bonus_text += f" {k}+{v}"
+            upgrade_narrative = f"\n\n⬆️ 组织升级！{upgrade_info['new_name']}（Lv.{upgrade_info['new_level']}）！{bonus_text}"
+
         # 恢复AP
         self.game_state["ap"] = self.game_state["max_ap"]
         self.game_state["day"] += 1
@@ -805,31 +1550,32 @@ class GameEngine:
         )
         narrative = self._call_ai("end_day", context)
 
-        # 添加事件详情
         if event.get("poached"):
             narrative += f"\n\n⚠️ {event['poached']['name']} 被竞争对手挖走了！"
         elif event.get("no_effect"):
             narrative += "\n\n所幸没有重大损失。"
 
-        # 添加杀手活动日志
         if activity_events:
             narrative += activity_narrative
 
-        # 添加竞争对手动态
         if rival_events:
             narrative += rival_narrative
 
-        # 添加随机捡人事件
+        if invest_narrative:
+            narrative += invest_narrative
+
+        if upgrade_narrative:
+            narrative += upgrade_narrative
+
         if encounter_narrative:
             narrative += encounter_narrative
 
-        # 检查游戏结束
         if self.game_state["funds"] <= 0 or self.game_state["reputation"] <= 0:
             game_over = self._call_ai("game_over", "组织覆灭")
             self.game_state["game_over"] = True
             narrative += f"\n\n{game_over}"
 
-        return narrative, event, encounter_data if encounter_data else None
+        return narrative, event, encounter_data if encounter_data else None, upgrade_info
 
     # ---- AI 叙事生成 ----
 
@@ -858,10 +1604,15 @@ class GameEngine:
 
     def show_weapon_shop(self):
         """展示武器商店"""
+        # 技术专家打折
+        discount = 1.0
+        if self.game_state["cadres"]["tech_expert"]:
+            discount = 0.8
+
         available = [w for w in self.game_state["weapons"] if not w["owned"]]
         if not available:
             return [], "枭摇了摇头：'老板，武器商这边暂时没货了。'"
-        return available, f"枭推了推桌上的武器清单：'这是黑市上能搞到的好货。'"
+        return available, discount, f"枭推了推桌上的武器清单：'这是黑市上能搞到的好货。'"
 
     def buy_weapon(self, weapon_id: int):
         """购买武器"""
@@ -874,14 +1625,18 @@ class GameEngine:
                 break
         if not weapon:
             return "找不到这件武器。"
-        if self.game_state["funds"] < weapon["price"]:
-            return f"资金不够，{weapon['name']} 需要 ¥{weapon['price']}。"
+        # 折扣
+        discount = 0.8 if self.game_state["cadres"]["tech_expert"] else 1.0
+        price = int(weapon["price"] * discount)
+        if self.game_state["funds"] < price:
+            return f"资金不够，{weapon['name']} 需要 ¥{price}。"
         if self.game_state["reputation"] < weapon["rep_required"]:
             return f"声望不够，需要 {weapon['rep_required']} 声望才能购买{weapon['name']}。"
-        self._modify_state("funds", -weapon["price"])
+        self._modify_state("funds", -price)
         self._modify_state("ap", -1)
         weapon["owned"] = True
-        return f"购买成功！{weapon['name']}（{weapon['rarity']}）已入库。"
+        discount_text = f"（技术专家折扣：¥{weapon['price']} → ¥{price}）" if discount < 1.0 else ""
+        return f"购买成功！{weapon['name']}（{weapon['rarity']}）已入库。{discount_text}"
 
     def equip_weapon(self, hitman_id: int, weapon_id: int):
         """给杀手装备武器"""
@@ -899,7 +1654,6 @@ class GameEngine:
                 break
         if not weapon:
             return "找不到这件武器。"
-        # 先卸下当前装备的武器
         if hitman["weapon_id"]:
             for w in self.game_state["weapons"]:
                 if w["id"] == hitman["weapon_id"]:
@@ -925,13 +1679,29 @@ class GameEngine:
         return f"已从 {hitman['name']} 身上卸下武器。"
 
     def show_training(self):
-        """展示训练选项"""
+        """展示训练选项（受安全屋加成）"""
         if self.game_state["ap"] <= 0:
             return [], "今天的行动力不够了，明天再练吧。"
         hitmen = [m for m in self.game_state["hitmen"] if m["status"] == "idle"]
         if not hitmen:
             return [], "没有空闲的杀手可以训练。"
-        return TRAINING_OPTIONS, "枭拿出一份训练清单：'该让这些人活动活动筋骨了。'"
+
+        # 训练场加成
+        training_bonus = self.game_state["safehouse"].get("training_ground", 0) * 0.5
+
+        options = []
+        for t in TRAINING_OPTIONS:
+            opt = dict(t)
+            if training_bonus > 0:
+                attr, amount = opt["effect"]
+                opt["effect"] = (attr, int(amount * (1 + training_bonus)))
+                opt["desc"] = opt["desc"].replace(f"+{amount}", f"+{int(amount*(1+training_bonus))}")
+                opt["has_bonus"] = True
+            else:
+                opt["has_bonus"] = False
+            options.append(opt)
+
+        return options, "枭拿出一份训练清单：'该让这些人活动活动筋骨了。'"
 
     def do_training(self, training_id: str, hitman_id: int):
         """执行训练"""
@@ -955,18 +1725,25 @@ class GameEngine:
             return f"资金不够，{training['name']} 需要 ¥{training['cost']}。"
         if self.game_state["ap"] < training["ap"]:
             return "行动力不够完成这项训练。"
+
+        # 训练场加成
+        training_bonus = self.game_state["safehouse"].get("training_ground", 0) * 0.5
+
         self._modify_state("funds", -training["cost"])
         self._modify_state("ap", -training["ap"])
         attr, amount = training["effect"]
+        if training_bonus > 0:
+            amount = int(amount * (1 + training_bonus))
         if attr == "skill":
             hitman["skill"] = min(10, hitman["skill"] + amount)
         elif attr == "loyalty":
             hitman["loyalty"] = min(10, hitman["loyalty"] + amount)
-        # 获得经验
         exp_gain = training["ap"] * 20
         hitman["exp"] += exp_gain
         self._check_level_up(hitman)
-        return f"{hitman['name']} 完成了{training['name']}，{attr} +{amount}，经验 +{exp_gain}。"
+
+        bonus_text = f"（训练场加成 +{int(training_bonus*100)}%）" if training_bonus > 0 else ""
+        return f"{hitman['name']} 完成了{training['name']}，{attr} +{amount}，经验 +{exp_gain}。{bonus_text}"
 
     def _check_level_up(self, hitman):
         """检查杀手升级"""
@@ -1022,7 +1799,6 @@ class GameEngine:
         if self.game_state["ap"] < len(hitmen):
             return f"行动力不够，需要{len(hitmen)}点AP，当前只有{self.game_state['ap']}点。"
         self._modify_state("ap", -len(hitmen))
-        # 计算攻击成功率（所有参战杀手总和）
         total_skill = sum(h["skill"] for h in hitmen)
         bonus = len(hitmen) * 3
         player_power = total_skill + bonus
@@ -1038,6 +1814,8 @@ class GameEngine:
                 hitman["exp"] = hitman.get("exp", 0) + 50
                 hitman["missions_completed"] = hitman.get("missions_completed", 0) + 1
                 self._check_level_up(hitman)
+            # 黑帮声望增加
+            self._modify_faction("gang", 5)
             return f"行动成功！{rival['name']} 已被铲除，获得 ¥{gained}，声望 +5。\n参与杀手：{names}。"
         else:
             injured = random.choice(hitmen)
@@ -1079,7 +1857,7 @@ class GameEngine:
     # ---- 随机捡人事件 ----
 
     def _random_encounter(self):
-        """每天有一定概率遇到野生人才，返回叙事文本"""
+        """每天有一定概率遇到野生人才"""
         if random.random() > 0.3:
             return None
         names = ["流浪刀客", "退役特种兵", "暗网黑客", "街头混混", "神秘女子", "落魄佣兵"]
@@ -1089,7 +1867,6 @@ class GameEngine:
         spec = specials[idx]
         skill = random.randint(1, 3)
         cost = 5000 + skill * 3000
-        # 存储到 action_context 供前端 pick up
         self._action_context["encounter"] = {
             "name": name,
             "specialty": spec,
@@ -1099,7 +1876,7 @@ class GameEngine:
         return f"\n\n🤝 你在街头遇到了一个有意思的人：{name}（{spec}，战力{skill}）。花 ¥{cost} 可以招募他。"
 
     def get_leaderboard(self):
-        """获取杀手排行榜（含全服NPC，按战力排序）"""
+        """获取杀手排行榜"""
         ranking = []
         for h in self.game_state["hitmen"]:
             weapon_bonus = 0
@@ -1121,7 +1898,6 @@ class GameEngine:
                 "status": h["status"],
                 "is_npc": False,
             })
-        # 添加 NPC
         npcs = getattr(self, '_npc_leaderboard', [])
         for npc in npcs:
             if not npc.get("poached"):
@@ -1134,13 +1910,12 @@ class GameEngine:
         npcs = []
         names = random.sample(NPC_NAMES, min(len(NPC_NAMES), 12))
         for name in names:
-            # 排名越靠前越强
             skill = random.choices([2, 3, 4, 5, 6, 7, 8, 9, 10], weights=[5, 8, 12, 15, 15, 15, 12, 10, 8])[0]
             specialty = random.choice(SPECIALTIES)
             lv = max(1, skill - random.randint(0, 2))
             weapon_bonus = random.choice([0, 0, 1, 1, 2, 3])
             npcs.append({
-                "id": -random.randint(100000, 999999),  # 负ID与玩家杀手区分
+                "id": -random.randint(100000, 999999),
                 "name": name,
                 "specialty": specialty,
                 "skill": skill,
@@ -1151,7 +1926,6 @@ class GameEngine:
                 "is_npc": True,
                 "poached": False,
             })
-        # 按战力降序
         npcs.sort(key=lambda x: x["power"], reverse=True)
         self._npc_leaderboard = npcs
         return npcs
@@ -1170,25 +1944,20 @@ class GameEngine:
         cost = 8000 + target["skill"] * 5000
         if self.game_state["funds"] < cost:
             return f"资金不够挖角 {target['name']}，需要 ¥{cost}。"
-
         if self.game_state["ap"] < 1:
             return "行动力不够了。"
-
-        # 按战力计算成功率
         rep_bonus = self.game_state["reputation"] * 0.003
         success_chance = min(0.8, 0.2 + rep_bonus - target["skill"] * 0.05)
-        
+
         if random.random() < success_chance:
             self._modify_state("funds", -cost)
             self._modify_state("ap", -1)
             target["poached"] = True
-            # 创建真实杀手
             new_h = self._generate_hitman(target["skill"])
             new_h["name"] = target["name"]
             new_h["specialty"] = target["specialty"]
             new_h["lv"] = target["lv"]
             new_h["missions_completed"] = target["missions"]
-            # 如有武器加成，给一把对应等级的武器
             if target.get("weapon_bonus", 0) > 0:
                 for w in self.game_state["weapons"]:
                     if not w["owned"] and w["bonus"] == target["weapon_bonus"]:
@@ -1199,7 +1968,6 @@ class GameEngine:
             self.game_state["hitmen"].append(new_h)
             return f"挖角成功！{target['name']} 加入了你的组织！消耗 ¥{cost}，1AP。"
         else:
-            # 失败也花钱
             loss = cost // 2
             self._modify_state("funds", -loss)
             self._modify_state("ap", -1)
@@ -1236,7 +2004,7 @@ class GameEngine:
             return "找不到这个杀手。"
         self._modify_state("ap", -1)
         if hitman["_is_mole"]:
-            if random.random() < 0.7:  # 70% 成功率
+            if random.random() < 0.7:
                 hitman["_is_mole"] = False
                 owner = hitman.get("mole_owner", "未知组织")
                 return f"调查结果：{hitman['name']} 是{owner}安插的内奸！已清除。"

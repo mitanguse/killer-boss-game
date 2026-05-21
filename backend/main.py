@@ -67,9 +67,15 @@ def start_game():
     """开始新游戏"""
     try:
         narrative = engine.start_game()
+        # 检查主线剧情
+        story = engine.check_main_story()
+        extra = {}
+        if story:
+            extra["main_story"] = story
         return StateResponse(
             narrative=narrative,
             state=engine.get_state(),
+            extra=extra if extra else None,
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -84,7 +90,15 @@ def perform_action(req: ActRequest):
     try:
         if action == "start":
             narrative = engine.start_game()
-            return StateResponse(narrative=narrative, state=engine.get_state())
+            extra = {}
+            story = engine.check_main_story()
+            if story:
+                extra["main_story"] = story
+            return StateResponse(
+                narrative=narrative,
+                state=engine.get_state(),
+                extra=extra if extra else None,
+            )
 
         elif action == "recruit":
             candidates, narrative = engine.show_recruit_candidates()
@@ -128,16 +142,34 @@ def perform_action(req: ActRequest):
             contract_id = params.get("contract_id")
             contract_index = params.get("contract_index")
             hitman_id = params.get("hitman_id")
+            plan_id = params.get("plan_id")
             if hitman_id is None or (contract_id is None and contract_index is None):
                 return StateResponse(
                     error="请选择契约和派遣的杀手。",
                     state=engine.get_state(),
                 )
-            narrative, success = engine.assign_contract(contract_index, hitman_id, contract_id)
+            narrative, success = engine.assign_contract(contract_index, hitman_id, contract_id, plan_id)
+            extra = {"success": success}
+            # 检查主线剧情
+            story = engine.check_main_story()
+            if story:
+                extra["main_story"] = story
             return StateResponse(
                 narrative=narrative,
                 state=engine.get_state(),
-                extra={"success": success},
+                extra=extra,
+            )
+
+        elif action == "contract_plans":
+            hitman_id = params.get("hitman_id")
+            contract_index = params.get("contract_index")
+            if not hitman_id:
+                return StateResponse(error="请选择杀手。", state=engine.get_state())
+            plans = engine.get_contract_plans(hitman_id, contract_index)
+            return StateResponse(
+                narrative="",
+                state=engine.get_state(),
+                extra={"plans": plans},
             )
 
         elif action == "fire":
@@ -151,11 +183,17 @@ def perform_action(req: ActRequest):
             )
 
         elif action == "end_day":
-            narrative, event, encounter = engine.end_day()
+            result = engine.end_day()
+            narrative, event, encounter, upgrade = result
+            extra = {"event": event, "encounter": encounter, "upgrade": upgrade}
+            # 检查主线剧情
+            story = engine.check_main_story()
+            if story:
+                extra["main_story"] = story
             return StateResponse(
                 narrative=narrative,
                 state=engine.get_state(),
-                extra={"event": event, "encounter": encounter},
+                extra=extra,
             )
 
         elif action == "save":
@@ -210,11 +248,11 @@ def perform_action(req: ActRequest):
             )
 
         elif action == "weapon_shop":
-            weapons, narrative = engine.show_weapon_shop()
+            weapons, discount, narrative = engine.show_weapon_shop()
             return StateResponse(
                 narrative=narrative,
                 state=engine.get_state(),
-                extra={"weapons": weapons},
+                extra={"weapons": weapons, "discount": discount},
             )
 
         elif action == "buy_weapon":
@@ -302,8 +340,150 @@ def perform_action(req: ActRequest):
                 state=engine.get_state(),
             )
 
+        # ---- 新功能 API ----
+
+        elif action == "org_info":
+            info = engine.get_org_level_info()
+            return StateResponse(
+                narrative="",
+                state=engine.get_state(),
+                extra=info,
+            )
+
+        elif action == "safehouse":
+            upgrades, narrative = engine.show_safehouse_upgrades()
+            return StateResponse(
+                narrative=narrative,
+                state=engine.get_state(),
+                extra={"upgrades": upgrades},
+            )
+
+        elif action == "upgrade_safehouse":
+            upgrade_id = params.get("upgrade_id")
+            if not upgrade_id:
+                return StateResponse(error="请选择升级项目。", state=engine.get_state())
+            narrative = engine.upgrade_safehouse(upgrade_id)
+            return StateResponse(
+                narrative=narrative,
+                state=engine.get_state(),
+            )
+
+        elif action == "factions":
+            factions, error = engine.get_factions()
+            if error:
+                return StateResponse(error=error, state=engine.get_state())
+            return StateResponse(
+                narrative="枭递来一份城市势力动态报告。",
+                state=engine.get_state(),
+                extra={"factions": factions},
+            )
+
+        elif action == "laundry":
+            options, narrative = engine.show_laundry_options()
+            return StateResponse(
+                narrative=narrative,
+                state=engine.get_state(),
+                extra={"laundry_options": options},
+            )
+
+        elif action == "do_laundry":
+            channel_id = params.get("channel_id")
+            if not channel_id:
+                return StateResponse(error="请选择洗钱渠道。", state=engine.get_state())
+            narrative = engine.do_laundry(channel_id)
+            return StateResponse(
+                narrative=narrative,
+                state=engine.get_state(),
+            )
+
+        elif action == "investments":
+            types, existing, error = engine.show_investments()
+            if error:
+                return StateResponse(error=error, state=engine.get_state())
+            return StateResponse(
+                narrative="枭展开一份投资项目清单。",
+                state=engine.get_state(),
+                extra={"invest_types": types, "existing": existing},
+            )
+
+        elif action == "make_investment":
+            invest_id = params.get("invest_id")
+            if not invest_id:
+                return StateResponse(error="请选择投资项目。", state=engine.get_state())
+            narrative = engine.make_investment(invest_id)
+            return StateResponse(
+                narrative=narrative,
+                state=engine.get_state(),
+            )
+
+        elif action == "cadres":
+            info, error = engine.show_cadres()
+            if error:
+                return StateResponse(error=error, state=engine.get_state())
+            return StateResponse(
+                narrative="",
+                state=engine.get_state(),
+                extra={"cadres": info},
+            )
+
+        elif action == "appoint_cadre":
+            role_id = params.get("role_id")
+            hitman_id = params.get("hitman_id")
+            if not role_id or not hitman_id:
+                return StateResponse(error="请选择职位和杀手。", state=engine.get_state())
+            narrative = engine.appoint_cadre(role_id, hitman_id)
+            return StateResponse(
+                narrative=narrative,
+                state=engine.get_state(),
+            )
+
+        elif action == "remove_cadre":
+            role_id = params.get("role_id")
+            if not role_id:
+                return StateResponse(error="请选择职位。", state=engine.get_state())
+            narrative = engine.remove_cadre(role_id)
+            return StateResponse(
+                narrative=narrative,
+                state=engine.get_state(),
+            )
+
+        elif action == "hitman_profile":
+            hitman_id = params.get("hitman_id")
+            if not hitman_id:
+                return StateResponse(error="请选择杀手。", state=engine.get_state())
+            profile = engine.get_hitman_profile(hitman_id)
+            if not profile:
+                return StateResponse(error="找不到这个杀手。", state=engine.get_state())
+            return StateResponse(
+                narrative="",
+                state=engine.get_state(),
+                extra={"profile": profile},
+            )
+
+        elif action == "main_story":
+            story = engine.check_main_story()
+            return StateResponse(
+                narrative="",
+                state=engine.get_state(),
+                extra={"main_story": story},
+            )
+
+        elif action == "resolve_story":
+            level = params.get("level")
+            choice_index = params.get("choice_index")
+            if level is None or choice_index is None:
+                return StateResponse(error="参数错误。", state=engine.get_state())
+            response_text, ending = engine.resolve_main_story(level, choice_index)
+            extra = {"response": response_text}
+            if ending:
+                extra["ending"] = ending
+            return StateResponse(
+                narrative=response_text,
+                state=engine.get_state(),
+                extra=extra,
+            )
+
         elif action == "reset":
-            engine.reset_game()
             engine.reset_game()
             return StateResponse(
                 narrative="游戏已重置。",

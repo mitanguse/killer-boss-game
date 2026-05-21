@@ -11,10 +11,11 @@
 
 const API_BASE = window.location.origin;
 
-let STATE = null;          // 当前游戏状态（来自后端）
+let STATE = null;
 let gameStarted = false;
 let loading = false;
-let modalState = null;     // 模态框状态: null | 'contracts' | 'recruit' | 'assign'
+let modalState = null;
+let currentContractIndex = null;
 
 // ============================================================
 // DOM 引用
@@ -26,6 +27,7 @@ const $$ = (sel) => document.querySelectorAll(sel);
 const dom = {
     // Header
     dayBadge: $('#day-badge'),
+    orgBadge: $('#org-badge'),
     headerFunds: $('#header-funds'),
     headerRep: $('#header-rep'),
     headerAp: $('#header-ap'),
@@ -48,6 +50,8 @@ const dom = {
     btnStart: $('#btn-start'),
     btnContracts: $('#btn-contracts'),
     btnRecruit: $('#btn-recruit'),
+    btnDevelop: $('#btn-develop'),
+    btnFactions: $('#btn-factions'),
     btnLeaderboard: $('#btn-leaderboard'),
     btnRivals: $('#btn-rivals'),
     btnWeaponShop: $('#btn-weapon-shop'),
@@ -97,7 +101,6 @@ async function fetchWithTimeout(url, options, timeoutMs) {
 async function apiCall(action, params = {}) {
     if (loading) return null;
     setLoading(true);
-
     try {
         const resp = await fetchWithTimeout(`${API_BASE}/api/act`, {
             method: 'POST',
@@ -126,11 +129,8 @@ async function apiCall(action, params = {}) {
 async function apiStart() {
     if (loading) return null;
     setLoading(true);
-
     try {
-        const resp = await fetchWithTimeout(`${API_BASE}/api/start`, {
-            method: 'POST',
-        });
+        const resp = await fetchWithTimeout(`${API_BASE}/api/start`, { method: 'POST' });
         if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
         const data = await resp.json();
         return data;
@@ -154,6 +154,7 @@ function updateStats(state) {
 
     // Header
     dom.dayBadge.textContent = `第 ${state.day} 天`;
+    dom.orgBadge.textContent = `Lv.${state.org_level} ${state.org_level_name}`;
     dom.headerFunds.textContent = formatMoney(state.funds);
     dom.headerRep.textContent = `${state.reputation}/${state.max_reputation}`;
     dom.headerAp.textContent = `${state.ap}/${state.max_ap}`;
@@ -199,16 +200,17 @@ function renderHitmen(hitmen) {
         card.className = 'hitman-card';
         card.dataset.id = h.id;
 
-        const loyaltyHearts = '❤️'.repeat(h.loyalty).padEnd(10, '🤍');
-
         const weaponName = h.weapon_id ? state.weapons?.find(w => w.id === h.weapon_id)?.name || '' : '';
         const lv = h.lv || 1;
         const exp = h.exp || 0;
         const needExp = lv * 50;
 
+        // Legend title (Lv8 unlock)
+        const legend = h.legend_title ? ` [${h.legend_title}]` : '';
+
         card.innerHTML = `
             <div class="name">
-                ${h.name}
+                ${h.name}${legend}
                 <span class="spec-badge">${h.specialty}</span>
             </div>
             <div class="details">
@@ -236,7 +238,7 @@ function statusText(status) {
 
 function updateButtons(state) {
     const apOk = state.ap > 0;
-    const hasIdleHitmen = (state.hitmen || []).some(h => h.status === 'idle');
+    const hasHitmen = (state.hitmen || []).length > 0;
 
     dom.btnRecruit.disabled = !gameStarted || state.game_over || !apOk;
     dom.btnContracts.disabled = !gameStarted || state.game_over;
@@ -244,9 +246,11 @@ function updateButtons(state) {
     dom.btnLeaderboard.disabled = !gameStarted;
     dom.btnSave.disabled = !gameStarted || state.game_over;
     dom.btnLoad.disabled = !gameStarted || state.game_over;
-    dom.btnTraining.disabled = !gameStarted || state.game_over || !apOk || state.hitmen.length === 0;
+    dom.btnTraining.disabled = !gameStarted || state.game_over || !apOk || !hasHitmen;
     dom.btnRivals.disabled = !gameStarted || state.game_over;
     dom.btnEndDay.disabled = !gameStarted || state.game_over;
+    dom.btnDevelop.disabled = !gameStarted || state.game_over;
+    dom.btnFactions.disabled = !gameStarted || state.game_over || state.org_level < 4;
 }
 
 function appendNarrative(text, type = 'narrative') {
@@ -261,7 +265,7 @@ function clearNarrative() {
     dom.narrativeContent.innerHTML = '';
 }
 
-// --- Toast 提示 ---
+// --- Toast ---
 function showToast(msg, durationMs) {
     durationMs = durationMs || 2000;
     let toast = document.getElementById('toast');
@@ -278,24 +282,6 @@ function showToast(msg, durationMs) {
 }
 
 // ============================================================
-// 显示资源变化动画
-// ============================================================
-
-function showChange(element, amount) {
-    if (!amount || amount === 0) return;
-    const el = document.createElement('span');
-    el.className = `resource-change ${amount > 0 ? 'positive' : 'negative'}`;
-    el.textContent = `${amount > 0 ? '+' : ''}${amount}`;
-    el.style.position = 'absolute';
-    el.style.top = '-5px';
-    el.style.right = '0';
-    element.style.position = 'relative';
-    element.appendChild(el);
-    requestAnimationFrame(() => el.classList.add('show'));
-    setTimeout(() => el.remove(), 1300);
-}
-
-// ============================================================
 // Modal 系统
 // ============================================================
 
@@ -303,7 +289,6 @@ function showModal(title, contentHtml) {
     dom.modalHeader.innerHTML = `<h2>${title}</h2>`;
     dom.modalBody.innerHTML = contentHtml;
     dom.modalOverlay.classList.remove('hidden');
-    // Close handler
     dom.modalClose.onclick = closeModal;
     dom.modalOverlay.onclick = (e) => {
         if (e.target === dom.modalOverlay) closeModal();
@@ -331,6 +316,36 @@ async function handleStart() {
     gameStarted = true;
     updateStats(data.state);
     appendNarrative(data.narrative, 'narrative');
+    setLoading(false);
+
+    // 检查主线剧情
+    if (data.extra?.main_story) {
+        setTimeout(() => showMainStoryModal(data.extra.main_story), 300);
+    }
+}
+
+// --- 主线剧情 ---
+function showMainStoryModal(story) {
+    let html = `<div style="margin-bottom:16px;line-height:1.8;">${story.text.replace(/\n/g, '<br>')}</div>`;
+    html += '<div style="display:flex;flex-direction:column;gap:8px;">';
+    story.choices.forEach((choice, i) => {
+        html += `<button class="btn btn-gold" onclick="doResolveStory(${story.level}, ${i})" style="width:100%;">${choice.text}</button>`;
+    });
+    html += '</div>';
+    showModal(`📖 ${story.title}`, html);
+}
+
+async function doResolveStory(level, choiceIndex) {
+    closeModal();
+    const data = await apiCall('resolve_story', { level, choice_index: choiceIndex });
+    if (!data) return;
+    updateStats(data.state);
+    appendNarrative(data.narrative, 'narrative');
+
+    if (data.extra?.ending) {
+        appendNarrative(`🎬 结局达成：${data.extra.ending}`, 'game-over');
+        disableGameButtons();
+    }
     setLoading(false);
 }
 
@@ -371,7 +386,7 @@ async function handleShowContracts() {
     setLoading(false);
 }
 
-// --- 派遣杀手 ---
+// --- 派遣杀手 + 方案选择 ---
 async function handleAssignContract(contractIndex) {
     modalState = 'assign';
     const hitmen = STATE?.hitmen || [];
@@ -383,13 +398,15 @@ async function handleAssignContract(contractIndex) {
         return;
     }
 
+    currentContractIndex = contractIndex;
     const contract = STATE.contracts[contractIndex];
+    const orgLevel = STATE.org_level;
+
     let html = `<p style="margin-bottom:12px;color:var(--text-secondary);">
         契约：<strong>${contract.name}</strong>（${contract.difficulty} · ${contract.required_specialty}）
     </p>
     <p style="margin-bottom:12px;font-size:13px;color:var(--text-muted);">选择派遣的杀手：</p>`;
 
-    // 先显示匹配专长的
     const sorted = [...idleHitmen].sort((a, b) => {
         const aMatch = a.specialty === contract.required_specialty ? -1 : 1;
         const bMatch = b.specialty === contract.required_specialty ? -1 : 1;
@@ -399,7 +416,7 @@ async function handleAssignContract(contractIndex) {
     sorted.forEach(h => {
         const isMatch = h.specialty === contract.required_specialty;
         html += `
-            <div class="hitman-select-card" onclick="executeAssign(${contractIndex}, ${h.id})">
+            <div class="hitman-select-card" onclick="showPlanChoice(${contractIndex}, ${h.id})">
                 <div>
                     <span class="sel-name">${h.name}</span>
                     <span class="sel-spec ${isMatch ? 'match' : ''}">
@@ -416,19 +433,59 @@ async function handleAssignContract(contractIndex) {
     dom.modalBody.innerHTML = html;
 }
 
-async function executeAssign(contractIndex, hitmanId) {
+async function showPlanChoice(contractIndex, hitmanId) {
+    // Lv3以下直接执行
+    if (STATE.org_level < 3) {
+        await executeAssign(contractIndex, hitmanId, null);
+        return;
+    }
+
+    // 获取可用方案
+    const data = await apiCall('contract_plans', { hitman_id: hitmanId, contract_index: contractIndex });
+    if (!data) return;
+
+    const plans = data.extra?.plans || [];
+    let html = '<p style="margin-bottom:12px;color:var(--text-secondary);">选择执行方案（Lv.3解锁）：</p>';
+
+    // 标准方案
+    html += `
+        <div class="candidate-card" onclick="executeAssign(${contractIndex}, ${hitmanId}, null)" style="cursor:pointer;margin-bottom:6px;">
+            <div><strong>标准执行</strong></div>
+            <div style="font-size:12px;color:var(--text-muted);">按常规方式执行，收益正常</div>
+        </div>
+    `;
+
+    plans.forEach(p => {
+        const avClass = p.is_available ? '' : 'style="opacity:0.5;"';
+        html += `
+            <div class="candidate-card" onclick="${p.is_available ? `executeAssign(${contractIndex}, ${hitmanId}, '${p.id}')` : 'showToast(\'专长不匹配\')'}" ${avClass} style="cursor:${p.is_available ? 'pointer' : 'not-allowed'};margin-bottom:6px;">
+                <div><strong>${p.name}</strong> ${p.is_available ? '<span style="color:var(--accent-green);font-size:11px;">✓ 匹配</span>' : '<span style="color:var(--text-muted);font-size:11px;">✗ 专长不匹配</span>'}</div>
+                <div style="font-size:12px;color:var(--text-muted);">${p.desc}</div>
+            </div>
+        `;
+    });
+
+    showModal('🎯 选择方案', html);
+    setLoading(false);
+}
+
+async function executeAssign(contractIndex, hitmanId, planId) {
     closeModal();
-    const data = await apiCall('assign_contract', { contract_index: contractIndex, hitman_id: hitmanId });
+    closeModal(); // 关闭方案选择 + 契约板
+    closeModal();
+    const data = await apiCall('assign_contract', {
+        contract_index: contractIndex,
+        hitman_id: hitmanId,
+        plan_id: planId,
+    });
     if (!data) return;
 
     updateStats(data.state);
     appendNarrative(data.narrative, 'narrative');
 
-    // 竞争对手挖角提醒
-    const evt = data.extra?.event;
-    if (evt?.poached) {
-        showModal('⚠️ 杀手被挖', evt.poached.name + ' 被竞争对手挖走了！<br><br><button class="btn" id="btn-close-poach-modal">确定</button>');
-        setTimeout(function(){ var b = document.getElementById("btn-close-poach-modal"); if(b) b.onclick = function(){ closeModal("modal-overlay"); }; }, 50);
+    // 主线剧情
+    if (data.extra?.main_story) {
+        setTimeout(() => showMainStoryModal(data.extra.main_story), 300);
     }
 
     if (data.state.game_over) {
@@ -484,7 +541,6 @@ async function handleHire(candidateIndex) {
     if (!data) return;
 
     if (data.extra?.hired === false) {
-        // 资金不足
         appendNarrative(data.narrative, 'system');
     } else {
         updateStats(data.state);
@@ -526,11 +582,11 @@ async function handleEndDay() {
     updateStats(data.state);
     appendNarrative(data.narrative, 'narrative');
 
-    // 街头偶遇弹窗
+    // 街头偶遇
     const enc = data.extra?.encounter;
     if (enc && enc.name) {
         const canAfford = data.state.funds >= enc.cost && data.state.ap > 0;
-        showModal('✨ 街头偶遇', 
+        showModal('✨ 街头偶遇',
             '你在街头遇到了一个有意思的人：<br><br>' +
             '<b>' + enc.name + '</b>(' + enc.specialty + '，战力' + enc.skill + ')<br>' +
             '招募费用：¥' + enc.cost + '<br><br>' +
@@ -538,8 +594,19 @@ async function handleEndDay() {
                 ? '<button class="btn btn-primary" onclick="doPickupEncounter()" style="margin-right:8px">❤ 招募</button>'
                 : '<span style="color:#f87171;">' + (data.state.funds < enc.cost ? '资金不足' : '行动力不足') + '</span>'
             ) +
-            '<button class="btn" onclick="closeModal(\'modal-overlay\')">❌ 忽略</button>'
+            '<button class="btn" onclick="closeModal()">❌ 忽略</button>'
         );
+    }
+
+    // 组织升级
+    if (data.extra?.upgrade) {
+        const up = data.extra.upgrade;
+        appendNarrative(`⬆️ 组织晋升！${up.new_name}（Lv.${up.new_level}）`, 'event');
+    }
+
+    // 主线剧情
+    if (data.extra?.main_story) {
+        setTimeout(() => showMainStoryModal(data.extra.main_story), 500);
     }
 
     if (data.state.game_over) {
@@ -604,7 +671,7 @@ async function handleRivals() {
         html += '<div style="font-size:12px;color:#888;">\uD83D\uDCAA战力' + r.strength + ' \u00B7 \uD83C\uDFE0' + r.territory + '街区 \u00B7 \u2B50声望' + r.reputation + '</div>';
         html += '<div style="font-size:11px;color:#666;">敌意: ' + hostilityBar + '</div>';
         if (idleHitmen.length > 0 && data.state.ap > 0) {
-            html += '<div style="margin-top:4px;font-size:11px;color:#aaa;">勾选要派出的杀手（可多选，每人消耗1AP）:</div><div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:4px;">';
+            html += '<div style="margin-top:4px;font-size:11px;color:#aaa;">勾选要派出的杀手:</div><div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:4px;">';
             idleHitmen.forEach(h => {
                 html += '<label style="border:1px solid #555;border-radius:6px;padding:4px 8px;font-size:11px;cursor:pointer;display:flex;align-items:center;gap:4px;">';
                 html += '<input type="checkbox" class="rival-hitman-cb" data-rival-id="' + r.id + '" data-hitman-id="' + h.id + '" style="accent-color:#e74c3c;">';
@@ -631,7 +698,9 @@ async function doMultiAttackRival(rivalId) {
     if (!data) return;
     updateStats(data.state);
     appendNarrative(data.narrative, 'system');
-}// --- 武器库 ---
+}
+
+// --- 武器库 ---
 async function handleWeaponShop() {
     modalState = 'weapon_shop';
     const data = await apiCall('weapon_shop');
@@ -642,18 +711,24 @@ async function handleWeaponShop() {
         appendNarrative(data.narrative, 'system');
         return;
     }
-    let html = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">';
+    const discount = data.extra?.discount || 1.0;
+    let html = '';
+    if (discount < 1.0) {
+        html += '<p style="color:var(--accent-green);font-size:12px;margin-bottom:8px;">🔧 技术专家折扣：所有武器8折！</p>';
+    }
+    html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">';
     weapons.forEach(w => {
-        const canBuy = data.state.funds >= w.price && data.state.reputation >= w.rep_required;
+        const price = Math.floor(w.price * discount);
+        const canBuy = data.state.funds >= price && data.state.reputation >= w.rep_required;
         html += `<div style="border:1px solid #444;border-radius:8px;padding:10px;background:#222;">`;
         html += `<div style="font-weight:bold;">${w.name}</div>`;
         html += `<div style="font-size:12px;color:#888;">${w.type} · ${w.rarity}</div>`;
-        html += `<div style="color:#d4a017;">战力+${w.bonus} · ¥${w.price}</div>`;
+        html += `<div style="color:#d4a017;">战力+${w.bonus} · ¥${price}</div>`;
         html += `<div style="font-size:11px;color:#666;">需声望: ${w.rep_required}</div>`;
         if (canBuy) {
             html += `<button class="btn btn-sm" onclick="doBuyWeapon(${w.id})" style="margin-top:6px;width:100%;">购买</button>`;
         } else {
-            html += `<button class="btn btn-sm" disabled style="margin-top:6px;width:100%;">${data.state.funds < w.price ? '资金不足' : '声望不够'}</button>`;
+            html += `<button class="btn btn-sm" disabled style="margin-top:6px;width:100%;">${data.state.funds < price ? '资金不足' : '声望不够'}</button>`;
         }
         html += '</div>';
     });
@@ -684,8 +759,9 @@ async function handleTraining() {
     let html = '<p>选择训练项目和杀手：</p>';
     options.forEach(t => {
         const canAfford = data.state.funds >= t.cost && data.state.ap >= t.ap;
+        const bonusTag = t.has_bonus ? ' <span style="color:var(--accent-green);font-size:10px;">🏋️ +训练场加成</span>' : '';
         html += `<div style="border:1px solid #444;border-radius:8px;padding:10px;margin-bottom:8px;">`;
-        html += `<div style="font-weight:bold;">${t.name}</div>`;
+        html += `<div style="font-weight:bold;">${t.name}${bonusTag}</div>`;
         html += `<div style="font-size:12px;color:#888;">${t.desc}</div>`;
         html += `<div style="color:#d4a017;">¥${t.cost} · ⚡${t.ap} AP</div>`;
         if (t.min_lv) html += `<div style="font-size:11px;color:#666;">需要Lv.${t.min_lv}</div>`;
@@ -710,17 +786,302 @@ async function doTraining(trainingId, hitmanId) {
     appendNarrative(data.narrative, 'system');
 }
 
-async function handleReset() {
-    if (!confirm('确定要重置游戏吗？所有进度将丢失。')) return;
-    const data = await apiCall('reset');
-    if (!data) return;
-    gameStarted = false;
-    clearNarrative();
-    updateStats(data.state);
-    dom.startScreen.classList.remove('hidden');
-    dom.gameUI.classList.add('hidden');
-    setLoading(false);
+// --- 发展（安全屋/洗钱/投资/干部） ---
+async function handleDevelop() {
+    const orgLevel = STATE.org_level;
+    let html = '<p style="margin-bottom:12px;color:var(--text-secondary);">🏗️ 组织发展选项：</p>';
+
+    // 安全屋 (Lv2+)
+    if (orgLevel >= 2) {
+        html += `<div class="candidate-card" onclick="handleSafehouse()" style="cursor:pointer;">
+            <div><strong>🏠 安全屋升级</strong></div>
+            <div style="font-size:12px;color:var(--text-muted);">训练场、医疗室、情报室、审讯室</div>
+        </div>`;
+    }
+
+    // 洗钱 (Lv4+)
+    if (orgLevel >= 4) {
+        const dirty = STATE.dirty_money || 0;
+        html += `<div class="candidate-card" onclick="handleLaundry()" style="cursor:pointer;">
+            <div><strong>🧺 洗钱 <span style="color:var(--accent-gold);">脏钱: ¥${dirty.toLocaleString()}</span></strong></div>
+            <div style="font-size:12px;color:var(--text-muted);">把脏钱洗白，安全使用</div>
+        </div>`;
+    }
+
+    // 干部 (Lv5+)
+    if (orgLevel >= 5) {
+        html += `<div class="candidate-card" onclick="handleCadres()" style="cursor:pointer;">
+            <div><strong>👔 干部任命</strong></div>
+            <div style="font-size:12px;color:var(--text-muted);">情报官、行动队长、技术专家、后勤主管</div>
+        </div>`;
+    }
+
+    // 投资 (Lv6+)
+    if (orgLevel >= 6) {
+        html += `<div class="candidate-card" onclick="handleInvestments()" style="cursor:pointer;">
+            <div><strong>💹 投资管理</strong></div>
+            <div style="font-size:12px;color:var(--text-muted);">夜总会、赌场、房产——钱生钱</div>
+        </div>`;
+    }
+
+    if (orgLevel < 2) {
+        html += '<p style="color:var(--text-muted);">需要 Lv.2 区域新秀 才能解锁发展选项。</p>';
+    }
+
+    showModal('🏗️ 发展', html);
 }
+
+// --- 安全屋 ---
+async function handleSafehouse() {
+    const data = await apiCall('safehouse');
+    if (!data) return;
+    closeModal();
+
+    if (data.error) {
+        appendNarrative(data.error, 'system');
+        return;
+    }
+
+    const upgrades = data.extra?.upgrades || [];
+    let html = '<p style="margin-bottom:12px;color:var(--text-secondary);">选择要升级的设施：</p>';
+    if (upgrades.length === 0) {
+        html += '<p style="color:var(--text-muted);">所有设施已满级。</p>';
+    }
+
+    upgrades.forEach(u => {
+        const canAfford = STATE.funds >= u.cost && STATE.ap > 0;
+        html += `<div style="border:1px solid #444;border-radius:8px;padding:10px;margin-bottom:8px;">
+            <div style="font-weight:bold;">${u.name}</div>
+            <div style="font-size:12px;color:#888;">${u.desc}</div>
+            <div style="font-size:12px;color:var(--text-muted);">Lv.${u.current_lv} → Lv.${u.next_lv} / Lv.${u.max_lv}</div>
+            <div style="color:#d4a017;">升级费用：¥${u.cost.toLocaleString()}</div>
+            ${canAfford
+                ? `<button class="btn btn-sm" onclick="doSafehouseUpgrade('${u.id}')" style="margin-top:4px;width:100%;">⬆ 升级</button>`
+                : `<button class="btn btn-sm" disabled style="margin-top:4px;width:100%;">${STATE.funds < u.cost ? '资金不足' : 'AP不够'}</button>`
+            }
+        </div>`;
+    });
+
+    showModal('🏠 安全屋升级', html);
+}
+
+async function doSafehouseUpgrade(upgradeId) {
+    closeModal();
+    const data = await apiCall('upgrade_safehouse', { upgrade_id: upgradeId });
+    if (!data) return;
+    updateStats(data.state);
+    appendNarrative(data.narrative, 'system');
+}
+
+// --- 阵营声望 ---
+async function handleFactions() {
+    const data = await apiCall('factions');
+    if (!data) return;
+
+    if (data.error) {
+        showToast(data.error);
+        return;
+    }
+
+    const factions = data.extra?.factions || {};
+    let html = '<p style="margin-bottom:12px;color:var(--text-secondary);">城市各方势力对你的态度：</p>';
+
+    const factionInfo = {
+        police: { icon: '🚔', name: '警方', color: '#2980b9', desc: '高→不查你，低→经常突袭' },
+        gang: { icon: '🔫', name: '黑帮', color: '#e74c3c', desc: '高→更多合约，低→被攻击' },
+        politician: { icon: '🎩', name: '政客', color: '#d4a017', desc: '高→政治庇护，低→被施压' },
+    };
+
+    Object.entries(factions).forEach(([key, val]) => {
+        const info = factionInfo[key] || { icon: '❓', name: key, color: '#888', desc: '' };
+        const pct = (val.value / val.max) * 100;
+        const barColor = pct > 60 ? '#27ae60' : pct > 30 ? '#d4a017' : '#c0392b';
+        html += `
+            <div style="border:1px solid ${info.color};border-radius:8px;padding:12px;margin-bottom:10px;background:rgba(0,0,0,0.3);">
+                <div style="font-weight:bold;color:${info.color};">${info.icon} ${info.name}：${val.value}/${val.max}</div>
+                <div style="margin-top:4px;height:8px;background:#2a2a3a;border-radius:4px;overflow:hidden;">
+                    <div style="height:100%;width:${pct}%;background:${barColor};border-radius:4px;transition:width 0.5s;"></div>
+                </div>
+                <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">${info.desc}</div>
+            </div>
+        `;
+    });
+
+    showModal('🏛️ 阵营声望', html);
+}
+
+// --- 洗钱 ---
+async function handleLaundry() {
+    const data = await apiCall('laundry');
+    if (!data) return;
+    closeModal();
+
+    if (data.error) {
+        appendNarrative(data.error, 'system');
+        return;
+    }
+
+    const options = data.extra?.laundry_options || [];
+    const dirty = STATE.dirty_money || 0;
+    if (options.length === 0) {
+        showModal('🧺 洗钱', '<p style="color:var(--text-muted);">没有脏钱需要处理，或者你还没有解锁洗钱渠道。</p>');
+        return;
+    }
+
+    let html = `<p style="margin-bottom:8px;color:var(--text-secondary);">当前脏钱：<span style="color:var(--accent-gold);">¥${dirty.toLocaleString()}</span></p>`;
+    options.forEach(o => {
+        html += `<div style="border:1px solid #444;border-radius:8px;padding:10px;margin-bottom:8px;">
+            <div style="font-weight:bold;">${o.name}</div>
+            <div style="font-size:12px;color:#888;">${o.desc}</div>
+            <div style="font-size:12px;color:var(--accent-gold);">预计洗白：¥${o.clean_amount.toLocaleString()}</div>
+            ${o.can_use
+                ? `<button class="btn btn-sm" onclick="doLaundry('${o.id}')" style="margin-top:4px;width:100%;">🧺 洗钱</button>`
+                : `<button class="btn btn-sm" disabled style="margin-top:4px;width:100%;">条件不足</button>`
+            }
+        </div>`;
+    });
+
+    showModal('🧺 洗钱', html);
+}
+
+async function doLaundry(channelId) {
+    closeModal();
+    const data = await apiCall('do_laundry', { channel_id: channelId });
+    if (!data) return;
+    updateStats(data.state);
+    appendNarrative(data.narrative, 'system');
+}
+
+// --- 投资 ---
+async function handleInvestments() {
+    const data = await apiCall('investments');
+    if (!data) return;
+    closeModal();
+
+    if (data.error) {
+        appendNarrative(data.error, 'system');
+        return;
+    }
+
+    const types = data.extra?.invest_types || [];
+    const existing = data.extra?.existing || [];
+
+    let html = '';
+    if (existing.length > 0) {
+        html += '<p style="margin-bottom:8px;color:var(--text-secondary);">现有投资：</p>';
+        existing.forEach(inv => {
+            html += `<div style="border:1px solid var(--accent-green);border-radius:8px;padding:8px;margin-bottom:6px;background:rgba(39,174,96,0.1);">
+                <div><strong>${inv.name}</strong></div>
+                <div style="font-size:12px;color:#888;">投入：¥${inv.amount.toLocaleString()} · 运营${inv.weeks_active}周 · 回报率${(inv.week_return*100).toFixed(0)}%/周</div>
+            </div>`;
+        });
+        html += '<hr style="border-color:var(--border);margin:12px 0;">';
+    }
+
+    html += '<p style="margin-bottom:8px;color:var(--text-secondary);">选择新的投资项目：</p>';
+    types.forEach(t => {
+        const canAfford = STATE.funds >= t.min_invest && STATE.ap > 0;
+        html += `<div style="border:1px solid #444;border-radius:8px;padding:10px;margin-bottom:8px;">
+            <div style="font-weight:bold;">${t.name}</div>
+            <div style="font-size:12px;color:#888;">${t.desc}</div>
+            <div style="font-size:12px;color:var(--accent-gold);">最少投资：¥${t.min_invest.toLocaleString()}</div>
+            ${canAfford
+                ? `<button class="btn btn-sm" onclick="doMakeInvestment('${t.id}')" style="margin-top:4px;width:100%;">💹 投资</button>`
+                : `<button class="btn btn-sm" disabled style="margin-top:4px;width:100%;">${STATE.funds < t.min_invest ? '资金不足' : 'AP不够'}</button>`
+            }
+        </div>`;
+    });
+
+    showModal('💹 投资', html);
+}
+
+async function doMakeInvestment(investId) {
+    closeModal();
+    const data = await apiCall('make_investment', { invest_id: investId });
+    if (!data) return;
+    updateStats(data.state);
+    appendNarrative(data.narrative, 'system');
+}
+
+// --- 干部 ---
+async function handleCadres() {
+    const data = await apiCall('cadres');
+    if (!data) return;
+    closeModal();
+
+    if (data.error) {
+        appendNarrative(data.error, 'system');
+        return;
+    }
+
+    const cadres = data.extra?.cadres || {};
+    const hitmen = STATE.hitmen || [];
+
+    let html = '<p style="margin-bottom:12px;color:var(--text-secondary);">组织干部架构：</p>';
+
+    Object.entries(cadres).forEach(([roleId, info]) => {
+        const role = info.role;
+        const current = info.current;
+        const assigned = info.assigned;
+
+        html += `<div style="border:1px solid var(--accent-purple);border-radius:8px;padding:12px;margin-bottom:8px;background:rgba(142,68,173,0.05);">
+            <div style="font-weight:bold;color:var(--accent-purple);">${role.name}</div>
+            <div style="font-size:12px;color:#888;">${role.desc}</div>
+            <div style="margin-top:4px;font-size:13px;">
+                当前：${current ? `<span style="color:var(--accent-green);">${current.name}</span>` : '<span style="color:var(--text-muted);">空缺</span>'}
+            </div>
+            ${assigned
+                ? `<button class="btn btn-sm" onclick="doRemoveCadre('${roleId}')" style="margin-top:4px;font-size:11px;">解除职务</button>`
+                : `<div style="margin-top:4px;display:flex;flex-wrap:wrap;gap:4px;">
+                    ${hitmen.filter(h => h.status === 'idle').map(h =>
+                        `<button class="btn btn-sm" onclick="doAppointCadre('${roleId}', ${h.id})" style="font-size:10px;">${h.name}</button>`
+                    ).join('')}
+                    ${hitmen.filter(h => h.status === 'idle').length === 0 ? '<span style="color:var(--text-muted);font-size:12px;">没有空闲杀手</span>' : ''}
+                </div>`
+            }
+        </div>`;
+    });
+
+    showModal('👔 干部任命', html);
+}
+
+async function doAppointCadre(roleId, hitmanId) {
+    closeModal();
+    const data = await apiCall('appoint_cadre', { role_id: roleId, hitman_id: hitmanId });
+    if (!data) return;
+    updateStats(data.state);
+    appendNarrative(data.narrative, 'system');
+}
+
+async function doRemoveCadre(roleId) {
+    closeModal();
+    const data = await apiCall('remove_cadre', { role_id: roleId });
+    if (!data) return;
+    updateStats(data.state);
+    appendNarrative(data.narrative, 'system');
+}
+
+// ============================================================
+// 资源变化动画
+// ============================================================
+
+function showChange(element, amount) {
+    if (!amount || amount === 0) return;
+    const el = document.createElement('span');
+    el.className = `resource-change ${amount > 0 ? 'positive' : 'negative'}`;
+    el.textContent = `${amount > 0 ? '+' : ''}${amount}`;
+    el.style.position = 'absolute';
+    el.style.top = '-5px';
+    el.style.right = '0';
+    element.style.position = 'relative';
+    element.appendChild(el);
+    requestAnimationFrame(() => el.classList.add('show'));
+    setTimeout(() => el.remove(), 1300);
+}
+
+// ============================================================
+// 排行榜
+// ============================================================
 
 async function handleLeaderboard() {
     const data = await apiCall('leaderboard');
@@ -765,23 +1126,16 @@ async function doPoachLeaderboard(npcId) {
     updateStats(data.state);
     appendNarrative(data.narrative, 'system');
 }
-async function apiCallAndRefresh(action, params) {
-    const data = await apiCall(action, params);
-    if (!data) return;
-    updateStats(data.state);
-    if (data.narrative) appendNarrative(data.narrative, 'narrative');
-    setLoading(false);
-}
 
 // ============================================================
-// Hitman 详细信息弹窗
+// Hitman 详细信息弹窗（含档案）
 // ============================================================
 
 function showHitmanDetail(hitman, cardEl) {
     const rect = cardEl.getBoundingClientRect();
     const detail = dom.hitmanDetail;
+    const orgLevel = STATE.org_level;
 
-    // 如果有已存在的解雇按钮，移除
     let fireBtnHtml = '';
     if (hitman.status === 'idle') {
         fireBtnHtml = `<button class="btn btn-danger btn-sm" onclick="handleFireHitman(${hitman.id})">🔥 解雇</button>`;
@@ -793,26 +1147,89 @@ function showHitmanDetail(hitman, cardEl) {
     const weapon = hitman.weapon_id ? state.weapons?.find(w => w.id === hitman.weapon_id) : null;
     const ownedWeapons = (state.weapons || []).filter(w => w.owned && !w.equipped_by);
 
-    detail.innerHTML = `
+    // 传奇称号（Lv8解锁）
+    const legendTitle = hitman.legend_title || '';
+
+    let html = `
         <div class="hd-name">${hitman.name} <span style="font-size:12px;color:#888;">Lv.${lv}</span></div>
+        ${legendTitle ? `<div style="color:var(--accent-gold);font-size:12px;margin-bottom:4px;">🏆 ${legendTitle}</div>` : ''}
         <div class="hd-row"><span>专长</span><span class="hd-val">${hitman.specialty}</span></div>
         <div class="hd-row"><span>战力</span><span class="hd-val">⚔️ ${hitman.skill}/10</span></div>
         <div class="hd-row"><span>忠诚</span><span class="hd-val">❤️ ${hitman.loyalty}/10</span></div>
         <div class="hd-row"><span>状态</span><span class="hd-val">${statusText(hitman.status)}</span></div>
-        <div class="hd-row"><span>抽成</span><span class="hd-val">📊 ${Math.round((hitman.cut||0.2)*100)}%（战力越高抽成越多）</span></div>
+        <div class="hd-row"><span>抽成</span><span class="hd-val">📊 ${Math.round((hitman.cut||0.2)*100)}%</span></div>
         <div class="hd-row"><span>经验</span><span class="hd-val">${exp}/${needExp}</span></div>
         <div class="hd-row"><span>任务完成</span><span class="hd-val">${hitman.missions_completed || 0} 次</span></div>
-        <div class="hd-row"><span>武器</span><span class="hd-val">${weapon ? '🔫 ' + weapon.name + '(' + weapon.rarity + ' +' + weapon.bonus + ')' : '无'}</span></div>
-        <div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border);">
-            ${fireBtnHtml}
-            ${weapon ? `<button class="btn btn-sm" onclick="doUnequipWeapon(${hitman.id})" style="margin-top:4px;width:100%;">🔧 卸下武器</button>` : ''}
-            ${ownedWeapons.length > 0 && hitman.status === 'idle' ? ownedWeapons.map(w => `<button class="btn btn-sm" onclick="doEquipWeapon(${hitman.id},${w.id})" style="margin:2px;">🔫 ${w.name}(${w.rarity})</button>`).join('') : ''}
-        </div>
-    `;
+        <div class="hd-row"><span>武器</span><span class="hd-val">${weapon ? '🔫 ' + weapon.name + '(' + weapon.rarity + ' +' + weapon.bonus + ')' : '无'}</span></div>`;
+
+    // 个人档案按钮（Lv8解锁）
+    if (orgLevel >= 8) {
+        html += `<div style="margin-top:6px;"><button class="btn btn-sm btn-gold" onclick="doHitmanProfile(${hitman.id})" style="width:100%;">📋 个人档案</button></div>`;
+    }
+
+    html += `<div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border);">
+        ${fireBtnHtml}
+        <button class="btn btn-sm" onclick="doInvestigate(${hitman.id})" style="margin-top:4px;width:100%;">🔍 调查内奸</button>
+        ${weapon ? `<button class="btn btn-sm" onclick="doUnequipWeapon(${hitman.id})" style="margin-top:4px;width:100%;">🔧 卸下武器</button>` : ''}
+        ${ownedWeapons.length > 0 && hitman.status === 'idle' ? ownedWeapons.map(w => `<button class="btn btn-sm" onclick="doEquipWeapon(${hitman.id},${w.id})" style="margin:2px;">🔫 ${w.name}(${w.rarity})</button>`).join('') : ''}
+    </div>`;
+
+    detail.innerHTML = html;
 
     detail.classList.remove('hidden');
     detail.style.left = Math.min(rect.left - 220, window.innerWidth - 240) + 'px';
-    detail.style.top = Math.min(rect.top, window.innerHeight - 300) + 'px';
+    detail.style.top = Math.min(rect.top, window.innerHeight - 400) + 'px';
+}
+
+async function doInvestigate(hitmanId) {
+    const data = await apiCall('investigate', { hitman_id: hitmanId });
+    if (!data) return;
+    appendNarrative(data.narrative, 'system');
+}
+
+// --- 杀手个人档案（Lv8） ---
+async function doHitmanProfile(hitmanId) {
+    dom.hitmanDetail.classList.add('hidden');
+    const data = await apiCall('hitman_profile', { hitman_id: hitmanId });
+    if (!data) return;
+
+    const p = data.extra?.profile;
+    if (!p) return;
+
+    let html = `
+        <div style="margin-bottom:12px;">
+            <div style="font-size:20px;font-weight:700;">${p.name}</div>
+            <div style="font-size:14px;color:var(--accent-gold);">🏆 ${p.legend_title || '新手'}</div>
+            <div style="font-size:12px;color:var(--text-muted);">${p.specialty} · Lv.${p.lv} · 战力${p.skill}</div>
+        </div>
+        <div style="margin-bottom:12px;">
+            <div style="border:1px solid var(--border);border-radius:8px;padding:10px;background:var(--bg-card);">
+                <div style="font-size:12px;color:var(--text-muted);">基础信息</div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-top:6px;font-size:13px;">
+                    <span>忠诚：❤️ ${p.loyalty}/10</span>
+                    <span>任务：📊 ${p.missions_completed}次</span>
+                    <span>状态：${statusText(p.status)}</span>
+                    <span>朋友：${p.friends?.length || 0}人</span>
+                    <span>对手：${p.rivals?.length || 0}人</span>
+                </div>
+            </div>
+        </div>
+        <div>
+            <div style="font-size:12px;color:var(--text-muted);margin-bottom:6px;">任务履历：</div>
+            ${(p.mission_history || []).length === 0
+                ? '<div style="color:var(--text-muted);font-size:12px;">还没有执行过任务。</div>'
+                : (p.mission_history || []).slice(-10).reverse().map(m =>
+                    `<div style="border:1px solid var(--border);border-radius:6px;padding:6px 10px;margin-bottom:4px;font-size:12px;display:flex;justify-content:space-between;background:var(--bg-card);">
+                        <span>${m.contract} (${m.difficulty})</span>
+                        <span style="color:${m.result === 'success' ? 'var(--accent-green)' : 'var(--accent-red)'};">${m.result === 'success' ? '✅' : '❌'} ¥${m.reward.toLocaleString()}</span>
+                    </div>`
+                ).join('')
+            }
+        </div>
+        ${p.epitaph ? `<div style="margin-top:12px;padding:10px;border:1px solid #444;border-radius:8px;background:#1a1a1a;font-style:italic;color:#888;text-align:center;">${p.epitaph}</div>` : ''}
+    `;
+
+    showModal(`📋 ${p.name} 的档案`, html);
 }
 
 // 点击其他地方关闭详情
@@ -837,6 +1254,24 @@ function setLoading(isLoading) {
     dom.loadingText.textContent = isLoading ? '枭正在收集情报……' : '';
 }
 
+function disableGameButtons() {
+    const buttons = dom.actionBar?.querySelectorAll('button') || [];
+    document.querySelectorAll('.action-bar .btn').forEach(b => b.disabled = true);
+    dom.btnEndDay.disabled = true;
+    if (dom.btnRestart) dom.btnRestart.classList.remove('hidden');
+}
+
+function apiCallAndRefresh(action, params) {
+    return new Promise(async (resolve) => {
+        const data = await apiCall(action, params);
+        if (!data) { resolve(null); return; }
+        updateStats(data.state);
+        if (data.narrative) appendNarrative(data.narrative, 'narrative');
+        setLoading(false);
+        resolve(data);
+    });
+}
+
 // ============================================================
 // 事件绑定
 // ============================================================
@@ -844,6 +1279,8 @@ function setLoading(isLoading) {
 dom.btnStart.addEventListener('click', handleStart);
 dom.btnContracts.addEventListener('click', handleShowContracts);
 dom.btnRecruit.addEventListener('click', handleRecruit);
+dom.btnDevelop.addEventListener('click', handleDevelop);
+dom.btnFactions.addEventListener('click', handleFactions);
 dom.btnEndDay.addEventListener('click', handleEndDay);
 dom.btnSave.addEventListener('click', handleSave);
 dom.btnLoad.addEventListener('click', handleLoad);
@@ -852,7 +1289,17 @@ dom.btnRivals.addEventListener('click', handleRivals);
 dom.btnWeaponShop.addEventListener('click', handleWeaponShop);
 dom.btnTraining.addEventListener('click', handleTraining);
 dom.btnLeaderboard.addEventListener('click', handleLeaderboard);
-dom.resetLink.addEventListener('click', handleReset);
+dom.resetLink.addEventListener('click', async function() {
+    if (!confirm('确定要重置游戏吗？所有进度将丢失。')) return;
+    const data = await apiCall('reset');
+    if (!data) return;
+    gameStarted = false;
+    clearNarrative();
+    updateStats(data.state);
+    dom.startScreen.classList.remove('hidden');
+    dom.gameUI.classList.add('hidden');
+    setLoading(false);
+});
 
 // ============================================================
 // 键盘快捷键
@@ -870,5 +1317,8 @@ document.addEventListener('keydown', (e) => {
 // 初始化
 // ============================================================
 
+// 挂载 closeModal 到全局供内联 onclick 调用
+window.closeModal = closeModal;
+
 console.log('🗡️ 杀手组织老板模拟器 v2 loaded');
-console.log('💡 使用纯按钮操作，开启你的暗面帝国吧');
+console.log('💡 纯按钮操作，开启你的暗面帝国吧');
