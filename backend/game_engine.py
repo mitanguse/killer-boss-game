@@ -514,7 +514,7 @@ class GameEngine:
         """生成招募候选人"""
         candidates = []
         for _ in range(count):
-            skill = random.choices([1, 2, 3, 4, 5], weights=[20, 30, 30, 15, 5])[0]
+            skill = random.choices([3, 4, 5, 6, 7, 8], weights=[20, 25, 25, 15, 10, 5])[0]
             recruitment_cost = 8000 + skill * 4000
             h = self._generate_hitman(skill)
             candidates.append({
