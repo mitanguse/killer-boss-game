@@ -494,6 +494,13 @@ async function executeAssign(contractIndex, hitmanId, planId) {
         setTimeout(() => showMainStoryModal(data.extra.main_story), 300);
     }
 
+
+    // 挖角弹窗
+    const evt = data.extra?.event;
+    if (evt?.poached) {
+        showModal('⚠️ 杀手被挖', (evt.poached.name || evt.poached) + ' 被竞争对手挖走了！<br><br><button class="btn" onclick="closeModal()">确定</button>');
+    }
+
     if (data.state.game_over) {
         appendNarrative('☠️ 游戏结束。这座城市的暗面永远在吞噬弱者。', 'game-over');
         disableGameButtons();

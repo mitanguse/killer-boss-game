@@ -1628,6 +1628,10 @@ class GameEngine:
 
         if rival_events:
             narrative += rival_narrative
+        # 传递挖角信息给前端弹窗
+        if getattr(self, '_poached_name', None):
+            event["poached"] = {"name": self._poached_name}
+            self._poached_name = None
 
         if invest_narrative:
             narrative += invest_narrative
@@ -1912,6 +1916,7 @@ class GameEngine:
                     target = random.choice(hitmen)
                     self.game_state["hitmen"].remove(target)
                     events.append(("!!", f"你的杀手 {target['name']} 被{rival['name']}挖走了！（忠诚太低）"))
+                    self._poached_name = target["name"]
                     poached_this_night = True
             elif action == "provoke":
                 dmg = random.randint(2, 5)
