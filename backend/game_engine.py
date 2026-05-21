@@ -2022,7 +2022,7 @@ class GameEngine:
         if attr == "skill" and training_lv > 0:
             amount = amount + training_lv
         if attr == "skill":
-            hitman["skill"] = min(10, hitman["skill"] + amount)
+            hitman["skill"] = min(50, hitman["skill"] + amount)
         elif attr == "loyalty":
             hitman["loyalty"] = min(10, hitman["loyalty"] + amount)
         exp_gain = training["ap"] * 20
@@ -2038,7 +2038,7 @@ class GameEngine:
         while hitman["exp"] >= needed:
             hitman["exp"] -= needed
             hitman["lv"] += 1
-            hitman["skill"] = min(10, hitman["skill"] + 1)
+            hitman["skill"] = min(50, hitman["skill"] + 1)
             needed = hitman["lv"] * 50
 
     # ---- 竞争对手系统 ----
