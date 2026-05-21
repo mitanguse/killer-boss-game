@@ -639,14 +639,9 @@ class GameEngine:
         if hitman["status"] == "on_mission":
             return "这个杀手正在执行任务，不能解雇。"
 
+        # 内奸直接开除，不耗AP（但损失声望）
         self.game_state["hitmen"].remove(hitman)
-
-        if self.game_state["ap"] <= 0:
-            return "行动力不够了。"
-
-        self._modify_state("ap", -1)
-
-        reputation_change = -hitman["skill"]  # 解雇高手影响声望
+        reputation_change = -hitman["skill"]
         self._modify_state("reputation", reputation_change)
 
         narrative = self._call_ai(
