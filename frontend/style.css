@@ -955,6 +955,12 @@ html, body {
         padding: 2px 8px;
     }
 
+    #app, #game-ui {
+        height: 100dvh;
+        overflow: hidden;
+    }
+    #game-ui.hidden { display: none !important; }
+
     /* 三栏改上下排列 */
     .main-area {
         flex-direction: column;
@@ -1024,15 +1030,15 @@ html, body {
         flex-wrap: wrap;
         gap: 4px;
         padding: 6px 4px;
-        overflow-y: auto;
-        max-height: 100px;
+        max-height: none;
+        overflow: visible;
     }
     .btn {
-        padding: 8px 6px;
-        font-size: 11px;
-        min-height: 36px;
-        flex: 1 0 auto;
-        max-width: 48%;
+        padding: 6px 6px;
+        font-size: 10px;
+        min-height: 30px;
+        flex: 0 0 auto;
+        max-width: none;
     }
     .btn-sm {
         padding: 6px 4px;
@@ -1041,6 +1047,15 @@ html, body {
         flex: 1 0 auto;
         max-width: 48%;
     }
+
+    /* 启动画面适配 */
+    .start-screen {
+        padding: 20px 16px;
+        gap: 16px;
+    }
+    .start-screen .logo { font-size: 48px; }
+    .start-screen .tagline { font-size: 14px; }
+    .start-screen .btn-start { font-size: 16px; padding: 12px 40px; }
 
     /* 模态框全屏 */
     .modal {
