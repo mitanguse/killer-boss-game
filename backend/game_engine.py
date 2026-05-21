@@ -1008,7 +1008,9 @@ class GameEngine:
             return "行动力不够了。"
         self._modify_state("ap", -1)
         # 计算攻击成功率
-        player_power = len([h for h in self.game_state["hitmen"] if h["status"] == "idle"]) * 5 + sum(h["skill"] for h in self.game_state["hitmen"])
+        idle_count = sum(1 for m in self.game_state["hitmen"] if m["status"] == "idle")
+        total_skill = sum(m["skill"] for m in self.game_state["hitmen"])
+        player_power = idle_count * 5 + total_skill
         success_chance = player_power / (player_power + rival["strength"])
         success_chance = max(0.2, min(0.9, success_chance))
         if random.random() < success_chance:
