@@ -48,6 +48,7 @@ const dom = {
     btnStart: $('#btn-start'),
     btnContracts: $('#btn-contracts'),
     btnRecruit: $('#btn-recruit'),
+    btnLeaderboard: $('#btn-leaderboard'),
     btnRivals: $('#btn-rivals'),
     btnWeaponShop: $('#btn-weapon-shop'),
     btnTraining: $('#btn-training'),
@@ -241,6 +242,8 @@ function updateButtons(state) {
     dom.btnContracts.disabled = !gameStarted || state.game_over;
     dom.btnWeaponShop.disabled = !gameStarted || state.game_over;
     dom.btnLeaderboard.disabled = !gameStarted;
+    dom.btnSave.disabled = !gameStarted || state.game_over;
+    dom.btnLoad.disabled = !gameStarted || state.game_over;
     dom.btnTraining.disabled = !gameStarted || state.game_over || !apOk || state.hitmen.length === 0;
     dom.btnRivals.disabled = !gameStarted || state.game_over;
     dom.btnEndDay.disabled = !gameStarted || state.game_over;
