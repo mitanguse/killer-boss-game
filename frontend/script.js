@@ -519,6 +519,22 @@ async function handleEndDay() {
     updateStats(data.state);
     appendNarrative(data.narrative, 'narrative');
 
+    // 街头偶遇弹窗
+    const enc = data.extra?.encounter;
+    if (enc && enc.name) {
+        const canAfford = data.state.funds >= enc.cost && data.state.ap > 0;
+        showModal('✨ 街头偶遇', 
+            '你在街头遇到了一个有意思的人：<br><br>' +
+            '<b>' + enc.name + '</b>(' + enc.specialty + '，战力' + enc.skill + ')<br>' +
+            '招募费用：¥' + enc.cost + '<br><br>' +
+            (canAfford
+                ? '<button class="btn btn-primary" onclick="doPickupEncounter()" style="margin-right:8px">❤ 招募</button>'
+                : '<span style="color:#f87171;">' + (data.state.funds < enc.cost ? '资金不足' : '行动力不足') + '</span>'
+            ) +
+            '<button class="btn" onclick="closeModal(\'modal-overlay\')">❌ 忽略</button>'
+        );
+    }
+
     if (data.state.game_over) {
         appendNarrative('☠️ 游戏结束。这座城市又吞掉了一个组织。', 'game-over');
         disableGameButtons();
@@ -526,8 +542,14 @@ async function handleEndDay() {
     setLoading(false);
 }
 
-// --- 重置 ---
-// --- 存档/读档 ---
+async function doPickupEncounter() {
+    closeModal();
+    const data = await apiCall('pickup');
+    if (!data) return;
+    updateStats(data.state);
+    appendNarrative(data.narrative, 'narrative');
+}
+
 async function handleSave() {
     const slot = 1;
     const data = await apiCall('save', { slot });

@@ -429,6 +429,7 @@ class GameEngine:
     def start_game(self):
         """初始化并开始新游戏"""
         self.reset_game()
+        self._pregen_candidates = self._generate_recruit_candidates(3)
         self.game_state["contracts"] = self._generate_contracts(3)
         narrative = self._call_ai("start", "游戏开场")
         return narrative
@@ -437,7 +438,9 @@ class GameEngine:
         """显示可招募的候选人（直接返回，不调 AI）"""
         if self.game_state["ap"] <= 0:
             return None, "今天的行动力已经用完了，明天再来招募吧。"
-        candidates = self._generate_recruit_candidates(3)
+        candidates = getattr(self, '_pregen_candidates', [])
+        if not candidates:
+            candidates = self._generate_recruit_candidates(3)
         self._action_context["candidates"] = candidates
         names = "、".join([c["name"] for c in candidates])
         narrative = f"枭带来了三份档案：{names}。\n看看他们的资料吧。"
@@ -759,8 +762,13 @@ class GameEngine:
         # 随机捡人事件
         encounter = self._random_encounter()
         encounter_narrative = ""
+        encounter_data = None
         if encounter:
+            encounter_data = self._action_context.get("encounter")
             encounter_narrative = encounter
+
+        # 预生成第二天的招募候选人
+        self._pregen_candidates = self._generate_recruit_candidates(3)
 
         # 竞争对手行动
         rival_events = self._rival_turn()
@@ -807,7 +815,7 @@ class GameEngine:
             self.game_state["game_over"] = True
             narrative += f"\n\n{game_over}"
 
-        return narrative, event
+        return narrative, event, encounter_data if encounter_data else None
 
     # ---- AI 叙事生成 ----
 

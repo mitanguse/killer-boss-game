@@ -150,11 +150,11 @@ def perform_action(req: ActRequest):
             )
 
         elif action == "end_day":
-            narrative, event = engine.end_day()
+            narrative, event, encounter = engine.end_day()
             return StateResponse(
                 narrative=narrative,
                 state=engine.get_state(),
-                extra={"event": event},
+                extra={"event": event, "encounter": encounter},
             )
 
         elif action == "save":
