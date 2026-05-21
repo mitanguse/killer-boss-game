@@ -720,43 +720,44 @@ async function handleLeaderboard() {
     if (!data) return;
     const ranking = data.extra?.ranking || [];
     if (!ranking.length) {
-        showModal('🏆 排行榜', '<p style="color:#888;">暂无杀手数据</p>');
+        showModal('\uD83C\uDFC6 \u6392\u884C\u699C', '<p style="color:#888;">\u6682\u65E0\u6740\u624B\u6570\u636E</p>');
         return;
     }
-    let html = '<div style="max-height:400px;overflow-y:auto;">';
-    html += '<div style="display:grid;grid-template-columns:36px 1fr 44px 44px 44px;gap:4px;font-size:11px;color:#888;padding:4px 0;border-bottom:1px solid #333;">';
-    html += '<span>#</span><span>杀手</span><span style="text-align:right">战力</span><span style="text-align:right">等级</span><span style="text-align:right">任务</span>';
+    const apOk = data.state.ap > 0;
+    const funds = data.state.funds;
+    let html = '<div style="max-height:420px;overflow-y:auto;">';
+    html += '<div style="display:grid;grid-template-columns:32px 1fr 32px 38px 38px;gap:2px;font-size:10px;color:#888;padding:4px 0;border-bottom:1px solid #333;">';
+    html += '<span>#</span><span>\u6740\u624B</span><span style="text-align:right">\u6218</span><span style="text-align:right">\u7B49</span><span style="text-align:right">\u4EFB</span>';
     html += '</div>';
     ranking.forEach((h, i) => {
-        const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : '';
+        const medal = i === 0 ? '\uD83E\uDD47' : i === 1 ? '\uD83E\uDD48' : i === 2 ? '\uD83E\uDD49' : '';
         const rankColor = i === 0 ? '#d4a017' : i === 1 ? '#94a3b8' : i === 2 ? '#cd7f32' : '#888';
-        const specEmoji = {'潜入':'🕵️','狙击':'🎯','近战':'⚔️','爆破':'💥','黑客':'💻'};
-        html += '<div style="display:grid;grid-template-columns:36px 1fr 44px 44px 44px;gap:4px;align-items:center;padding:6px 0;border-bottom:1px solid #1a1a1a;">';
-        html += '<span style="font-weight:700;color:' + rankColor + ';">' + (medal || (i + 1)) + '</span>';
-        html += '<span>' + (specEmoji[h.specialty] || '🗡️') + ' ' + h.name + '<br><span style="font-size:10px;color:#666;">' + h.specialty + '</span></span>';
-        html += '<span style="text-align:right;color:#60a5fa;">' + h.power + '</span>';
-        html += '<span style="text-align:right;color:#a78bfa;">Lv.' + h.lv + '</span>';
-        html += '<span style="text-align:right;color:#fbbf24;">' + h.missions + '</span>';
+        const specEmoji = { '\u6F5C\u5165':'\uD83D\uDD75\uFE0F', '\u72D9\u51FB':'\uD83C\uDFAF', '\u8FD1\u6218':'\u2694\uFE0F', '\u7206\u7834':'\uD83D\uDCA5', '\u9ED1\u5BA2':'\uD83D\uDCBB' };
+        const isNpc = h.is_npc;
+        const tag = isNpc ? '<span style="color:#888;font-size:9px;">\uD83D\uDC76 NPC</span>' : '<span style="color:#34d399;font-size:9px;">\uD83D\uDC9A \u6211\u7684</span>';
+        const poachBtn = isNpc && !h.poached
+            ? '<br><button class="btn btn-sm" onclick="doPoachLeaderboard(' + h.id + ')" style="font-size:9px;margin-top:2px;padding:2px 6px;' + (apOk && funds >= 8000 + h.skill * 5000 ? '' : 'opacity:0.4;') + '">\uD83D\uDCE5 \u6316\u89D2</button>'
+            : '';
+        html += '<div style="display:grid;grid-template-columns:32px 1fr 32px 38px 38px;gap:2px;align-items:center;padding:6px 0;border-bottom:1px solid #1a1a1a;">';
+        html += '<span style="font-weight:700;color:' + rankColor + ';font-size:13px;">' + (medal || (i + 1)) + '</span>';
+        html += '<span>' + (specEmoji[h.specialty] || '\uD83D\uDDE1\uFE0F') + ' ' + h.name + '<br>' + tag + '<span style="font-size:9px;color:#666;">' + h.specialty + '</span>' + poachBtn + '</span>';
+        html += '<span style="text-align:right;color:#60a5fa;font-size:12px;">' + h.power + '</span>';
+        html += '<span style="text-align:right;color:#a78bfa;font-size:11px;">Lv.' + h.lv + '</span>';
+        html += '<span style="text-align:right;color:#fbbf24;font-size:11px;">' + h.missions + '</span>';
         html += '</div>';
     });
-    html += '<div style="margin-top:8px;font-size:10px;color:#555;">评分 = 战力 + 武器加成 + 等级×0.5</div>';
+    html += '<div style="margin-top:8px;font-size:9px;color:#555;">\u8BC4\u5206 = \u6218\u529B + \u6B66\u5668\u52A0\u6210 + \u7B49\u7EA7\u00D70.5 \u00B7 \u6316\u89D2\u9700\u8981AP\u548C\u8D44\u91D1</div>';
     html += '</div>';
-    showModal('🏆 杀手排行榜', html);
+    showModal('\uD83C\uDFC6 \u6740\u624B\u6392\u884C\u699C', html);
 }
 
-function disableGameButtons() {
-    dom.btnRecruit.disabled = true;
-    dom.btnContracts.disabled = true;
-    dom.btnRivals.disabled = true;
-    dom.btnWeaponShop.disabled = true;
-    dom.btnTraining.disabled = true;
-    dom.btnEndDay.disabled = true;
-    dom.btnSave.disabled = true;
-    dom.btnLoad.disabled = true;
-    dom.btnRestart.classList.remove('hidden');
+async function doPoachLeaderboard(npcId) {
+    const data = await apiCall('poach_leaderboard', { npc_id: npcId });
+    if (!data) return;
+    closeModal();
+    updateStats(data.state);
+    appendNarrative(data.narrative, 'system');
 }
-
-// Helper: call action, update state, append narrative
 async function apiCallAndRefresh(action, params) {
     const data = await apiCall(action, params);
     if (!data) return;

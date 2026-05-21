@@ -24,14 +24,6 @@ HITMAN_NAMES = [
     "沈鸢", "韩隼", "秦鸢", "陆蝎", "顾鸦",
 ]
 
-# 排行榜 NPC 杀手（全服名人）
-NPC_NAMES = [
-    "血剑·无名", "影舞·白狐", "阎罗·黑煞", "霜刃·寒月",
-    "雷音·破军", "夜枭·鬼面", "焚天·烈阳", "千面·妖姬",
-    "无痕·绝影", "铁骨·金刚", "毒蜂·尾针", "幻瞳·魅影",
-    "断罪·裁决", "锈刃·老兵", "弦月·弓藏",
-]
-
 SPECIALTIES = ["潜入", "狙击", "近战", "爆破", "黑客"]
 SPECIALTY_EN = {
     "潜入": "infiltration",
@@ -196,7 +188,6 @@ class GameEngine:
 
     def reset_game(self):
         self._weapon_id_counter = 100
-        self._npc_leaderboard = []
         self.game_state = {
             "funds": 50000,
             "reputation": 10,
@@ -438,7 +429,6 @@ class GameEngine:
     def start_game(self):
         """初始化并开始新游戏"""
         self.reset_game()
-        self._generate_npc_hitmen()
         self._pregen_candidates = self._generate_recruit_candidates(3)
         self.game_state["contracts"] = self._generate_contracts(3)
         narrative = self._call_ai("start", "游戏开场")
@@ -551,8 +541,7 @@ class GameEngine:
         if contract.get("taken"):
             return "这个契约已经被执行了。", False
 
-        # 找杀手
-        for h in self.game_state["hitmen"]:
+        # 找杀手in self.game_state["hitmen"]:
             if h["id"] == hitman_id and h["status"] == "idle":
                 hitman = h
                 break
@@ -1102,7 +1091,7 @@ class GameEngine:
         return f"\n\n🤝 你在街头遇到了一个有意思的人：{name}（{spec}，战力{skill}）。花 ¥{cost} 可以招募他。"
 
     def get_leaderboard(self):
-        """获取杀手排行榜（含全服NPC，按战力排序）"""
+        """获取杀手排行榜（按战力评分排序）"""
         ranking = []
         for h in self.game_state["hitmen"]:
             weapon_bonus = 0
@@ -1122,92 +1111,9 @@ class GameEngine:
                 "power": round(power, 1),
                 "missions": h.get("missions_completed", 0),
                 "status": h["status"],
-                "is_npc": False,
             })
-        # 添加 NPC
-        npcs = getattr(self, '_npc_leaderboard', [])
-        for npc in npcs:
-            if not npc.get("poached"):
-                ranking.append(npc)
         ranking.sort(key=lambda x: x["power"], reverse=True)
         return ranking
-
-    def _generate_npc_hitmen(self):
-        """生成排行榜上的 NPC 杀手"""
-        npcs = []
-        names = random.sample(NPC_NAMES, min(len(NPC_NAMES), 12))
-        for name in names:
-            # 排名越靠前越强
-            skill = random.choices([2, 3, 4, 5, 6, 7, 8, 9, 10], weights=[5, 8, 12, 15, 15, 15, 12, 10, 8])[0]
-            specialty = random.choice(SPECIALTIES)
-            lv = max(1, skill - random.randint(0, 2))
-            weapon_bonus = random.choice([0, 0, 1, 1, 2, 3])
-            npcs.append({
-                "id": -random.randint(100000, 999999),  # 负ID与玩家杀手区分
-                "name": name,
-                "specialty": specialty,
-                "skill": skill,
-                "lv": lv,
-                "weapon_bonus": weapon_bonus,
-                "power": round(skill + weapon_bonus + lv * 0.5, 1),
-                "missions": random.randint(10, 200),
-                "is_npc": True,
-                "poached": False,
-            })
-        # 按战力降序
-        npcs.sort(key=lambda x: x["power"], reverse=True)
-        self._npc_leaderboard = npcs
-        return npcs
-
-    def poach_leaderboard(self, npc_id: int):
-        """从排行榜挖角 NPC 杀手"""
-        npcs = getattr(self, '_npc_leaderboard', [])
-        target = None
-        for n in npcs:
-            if n["id"] == npc_id and not n.get("poached"):
-                target = n
-                break
-        if not target:
-            return "这个杀手已经不在排行榜上了。"
-
-        cost = 8000 + target["skill"] * 5000
-        if self.game_state["funds"] < cost:
-            return f"资金不够挖角 {target['name']}，需要 ¥{cost}。"
-
-        if self.game_state["ap"] < 1:
-            return "行动力不够了。"
-
-        # 按战力计算成功率
-        rep_bonus = self.game_state["reputation"] * 0.003
-        success_chance = min(0.8, 0.2 + rep_bonus - target["skill"] * 0.05)
-        
-        if random.random() < success_chance:
-            self._modify_state("funds", -cost)
-            self._modify_state("ap", -1)
-            target["poached"] = True
-            # 创建真实杀手
-            new_h = self._generate_hitman(target["skill"])
-            new_h["name"] = target["name"]
-            new_h["specialty"] = target["specialty"]
-            new_h["lv"] = target["lv"]
-            new_h["missions_completed"] = target["missions"]
-            # 如有武器加成，给一把对应等级的武器
-            if target.get("weapon_bonus", 0) > 0:
-                for w in self.game_state["weapons"]:
-                    if not w["owned"] and w["bonus"] == target["weapon_bonus"]:
-                        w["owned"] = True
-                        w["equipped_by"] = new_h["id"]
-                        new_h["weapon_id"] = w["id"]
-                        break
-            self.game_state["hitmen"].append(new_h)
-            return f"挖角成功！{target['name']} 加入了你的组织！消耗 ¥{cost}，1AP。"
-        else:
-            # 失败也花钱
-            loss = cost // 2
-            self._modify_state("funds", -loss)
-            self._modify_state("ap", -1)
-            self._modify_state("reputation", -1)
-            return f"挖角失败……{target['name']} 拒绝了你。损失 ¥{loss}，声望-1。"
 
     def pickup_encounter(self):
         """捡人"""

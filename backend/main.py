@@ -292,6 +292,16 @@ def perform_action(req: ActRequest):
                 extra={"ranking": ranking},
             )
 
+        elif action == "poach_leaderboard":
+            npc_id = params.get("npc_id")
+            if not npc_id:
+                return StateResponse(error="请选择要挖角的杀手。", state=engine.get_state())
+            narrative = engine.poach_leaderboard(npc_id)
+            return StateResponse(
+                narrative=narrative,
+                state=engine.get_state(),
+            )
+
         elif action == "reset":
             engine.reset_game()
             engine.reset_game()
