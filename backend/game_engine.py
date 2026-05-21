@@ -430,7 +430,7 @@ class GameEngine:
         if skill_level is None:
             skill_level = random.choices([1, 2, 3, 4, 5], weights=[25, 30, 25, 15, 5])[0]
         specialty = random.choice(SPECIALTIES)
-        loyalty = random.randint(4, 9)
+        loyalty = random.randint(6, 10)
         cut_rates = {1: 0.15, 2: 0.20, 3: 0.30, 4: 0.40, 5: 0.50}
         cut = cut_rates.get(skill_level, 0.20)
         return {
@@ -504,7 +504,7 @@ class GameEngine:
         hitmen = self.game_state["hitmen"]
         if not hitmen:
             return None
-        targets = [m for m in hitmen if m["loyalty"] <= 5]
+        targets = [m for m in hitmen if m["loyalty"] <= 3]
         if not targets:
             return None
         if random.random() < 0.4:
@@ -1909,7 +1909,7 @@ class GameEngine:
                     stolen["taken"] = True
                     events.append((rival["name"], f"抢走了契约「{stolen['name']}」"))
             elif action == "poach" and not poached_this_night:
-                hitmen = [m for m in self.game_state["hitmen"] if m["loyalty"] <= 4]
+                hitmen = [m for m in self.game_state["hitmen"] if m["loyalty"] <= 3]
                 if hitmen and random.random() < 0.3:
                     target = random.choice(hitmen)
                     self.game_state["hitmen"].remove(target)
