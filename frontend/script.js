@@ -424,6 +424,13 @@ async function executeAssign(contractIndex, hitmanId) {
     updateStats(data.state);
     appendNarrative(data.narrative, 'narrative');
 
+    // 竞争对手挖角提醒
+    const evt = data.extra?.event;
+    if (evt?.poached) {
+        showModal('⚠️ 杀手被挖', evt.poached.name + ' 被竞争对手挖走了！<br><br><button class="btn" id="btn-close-poach-modal">确定</button>');
+        setTimeout(function(){ var b = document.getElementById("btn-close-poach-modal"); if(b) b.onclick = function(){ closeModal("modal-overlay"); }; }, 50);
+    }
+
     if (data.state.game_over) {
         appendNarrative('☠️ 游戏结束。这座城市的暗面永远在吞噬弱者。', 'game-over');
         disableGameButtons();

@@ -1048,6 +1048,7 @@ class GameEngine:
     def _rival_turn(self):
         """每个对手执行一次回合行动"""
         events = []
+        poached_this_night = False
         for rival in self.game_state["rivals"]:
             if not rival["alive"]:
                 continue
@@ -1058,12 +1059,13 @@ class GameEngine:
                     stolen = random.choice(contracts)
                     stolen["taken"] = True
                     events.append((rival["name"], f"抢走了契约「{stolen['name']}」"))
-            elif action == "poach":
-                hitmen = [m for m in self.game_state["hitmen"] if m["loyalty"] <= 5]
+            elif action == "poach" and not poached_this_night:
+                hitmen = [m for m in self.game_state["hitmen"] if m["loyalty"] <= 4]
                 if hitmen and random.random() < 0.3:
                     target = random.choice(hitmen)
                     self.game_state["hitmen"].remove(target)
-                    events.append((rival["name"], f"挖走了杀手 {target['name']}"))
+                    events.append(("!!", f"你的杀手 {target['name']} 被{rival['name']}挖走了！（忠诚太低）"))
+                    poached_this_night = True
             elif action == "provoke":
                 dmg = random.randint(2, 5)
                 self._modify_state("reputation", -dmg)
