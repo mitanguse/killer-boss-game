@@ -228,7 +228,7 @@ class GameEngine:
                 lines.append(
                     f"  - {h['name']} | 专长:{h['specialty']} "
                     f"| 忠诚:{h['loyalty']}/10 "
-                    f"| 月薪:¥{h['salary']} "
+                    f"| 抽成:{int(h.get('cut',0.2)*100)}% "
                     f"| 战力:{h['skill']}/5 "
                     f"| 状态:{h['status']}"
                 )
@@ -251,13 +251,15 @@ class GameEngine:
             skill_level = random.choices([1, 2, 3, 4, 5], weights=[25, 30, 25, 15, 5])[0]
         specialty = random.choice(SPECIALTIES)
         loyalty = random.randint(4, 9)
-        salary = 3000 + skill_level * 2000
+        cut_rates = {1: 0.15, 2: 0.20, 3: 0.30, 4: 0.40, 5: 0.50}
+        cut = cut_rates.get(skill_level, 0.20)
         return {
             "id": random.randint(10000, 99999),
             "name": self._random_name(),
             "specialty": specialty,
             "loyalty": loyalty,
-            "salary": salary,
+            "cut": cut,
+            "salary": 0,
             "skill": skill_level,
             "lv": 1,
             "exp": 0,
@@ -466,7 +468,8 @@ class GameEngine:
             "name": candidate["name"],
             "specialty": candidate["specialty"],
             "loyalty": candidate["loyalty"],
-            "salary": candidate["salary"],
+            "cut": candidate.get("cut", 0.20),
+            "salary": 0,
             "skill": candidate["skill"],
             "lv": 1,
             "exp": 0,
@@ -720,7 +723,7 @@ class GameEngine:
         old_day = self.game_state["day"]
 
         # 发工资
-        total_salary = sum(h["salary"] for h in self.game_state["hitmen"] if h["status"] != "dead")
+        total_salary = 0  # 佣金制：取消固定工资
         salary_narrative = ""
         if total_salary > 0:
             self._modify_state("funds", -total_salary)
