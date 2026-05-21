@@ -345,7 +345,7 @@ class GameEngine:
 
     def _default_state(self):
         return {
-            "funds": 50000,
+            "funds": 100000,
             "reputation": 10,
             "max_reputation": 200,
             "ap": 3,
