@@ -449,11 +449,10 @@ class GameEngine:
     def _generate_hitman(self, skill_level=None):
         """生成一个随机杀手（含关系网+内奸标记）"""
         if skill_level is None:
-            skill_level = random.choices([1, 2, 3, 4, 5], weights=[25, 30, 25, 15, 5])[0]
+            skill_level = random.choices(range(1, 51), weights=([50] + [40]*9 + [30]*10 + [20]*10 + [10]*10 + [5]*10))[0]
         specialty = random.choice(SPECIALTIES)
         loyalty = random.randint(6, 10)
-        cut_rates = {1: 0.15, 2: 0.20, 3: 0.30, 4: 0.40, 5: 0.50}
-        cut = cut_rates.get(skill_level, 0.20)
+        cut = min(0.60, 0.10 + skill_level * 0.01)
         return {
             "id": random.randint(10000, 99999),
             "name": self._random_name(),
@@ -820,7 +819,7 @@ class GameEngine:
         # 计算成功率
         base_success = 0.3
         specialty_bonus = 0.2 if hitman["specialty"] == contract["required_specialty"] else 0
-        skill_bonus = hitman["skill"] * 0.08
+        skill_bonus = hitman["skill"] * 0.01
         diff_penalty = {"简单": 0, "中等": -0.1, "困难": -0.25, "致命": -0.4}
         penalty = diff_penalty.get(contract["difficulty"], 0)
 
@@ -1690,7 +1689,7 @@ class GameEngine:
             elif act == "train":
                 gain = random.choice(["skill", "loyalty"])
                 if gain == "skill":
-                    h["skill"] = min(10, h["skill"] + 1)
+                    h["skill"] = min(50, h["skill"] + 1)
                     events.append((h["name"], "自己加练，战力+1", "activity"))
                 else:
                     h["loyalty"] = min(10, h["loyalty"] + 1)
@@ -2199,7 +2198,7 @@ class GameEngine:
         npcs = []
         names = random.sample(NPC_NAMES, min(len(NPC_NAMES), 12))
         for name in names:
-            skill = random.choices([2, 3, 4, 5, 6, 7, 8, 9, 10], weights=[5, 8, 12, 15, 15, 15, 12, 10, 8])[0]
+            skill = random.choices(range(5, 51), weights=[5]*10 + [8]*10 + [12]*10 + [10]*10 + [5]*10)[0]
             specialty = random.choice(SPECIALTIES)
             lv = max(1, skill - random.randint(0, 2))
             weapon_bonus = random.choice([0, 0, 1, 1, 2, 3])
