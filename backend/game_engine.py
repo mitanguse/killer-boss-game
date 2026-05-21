@@ -2198,7 +2198,7 @@ class GameEngine:
         npcs = []
         names = random.sample(NPC_NAMES, min(len(NPC_NAMES), 12))
         for name in names:
-            skill = random.choices(range(5, 51), weights=[5]*10 + [8]*10 + [12]*10 + [10]*10 + [5]*10)[0]
+            skill = random.choices(range(5, 51), weights=[5]*9 + [8]*10 + [12]*10 + [10]*10 + [5]*7)[0]
             specialty = random.choice(SPECIALTIES)
             lv = max(1, skill - random.randint(0, 2))
             weapon_bonus = random.choice([0, 0, 1, 1, 2, 3])
