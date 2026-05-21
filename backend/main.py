@@ -197,10 +197,12 @@ def perform_action(req: ActRequest):
 
         elif action == "attack_rival":
             rival_id = params.get("rival_id")
-            hitman_id = params.get("hitman_id")
-            if not rival_id or not hitman_id:
+            hitman_ids = params.get("hitman_ids", params.get("hitman_id"))
+            if not rival_id or not hitman_ids:
                 return StateResponse(error="请选择目标和派遣的杀手。", state=engine.get_state())
-            narrative = engine.attack_rival(rival_id, hitman_id)
+            if isinstance(hitman_ids, int):
+                hitman_ids = [hitman_ids]
+            narrative = engine.attack_rival(rival_id, hitman_ids)
             return StateResponse(
                 narrative=narrative,
                 state=engine.get_state(),

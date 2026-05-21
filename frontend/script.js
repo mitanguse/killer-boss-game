@@ -589,34 +589,42 @@ async function handleRivals() {
     closeModal();
     const rivals = data.extra?.rivals || [];
     const idleHitmen = (data.state.hitmen || []).filter(h => h.status === 'idle');
-    let html = '';
+    let html = '<div id="rival-modal-content">';
     rivals.forEach(r => {
-        const hostilityBar = '🔴'.repeat(Math.ceil(r.hostile / 20)).padEnd(5, '⚪');
-        html += `<div style="border:1px solid #c0392b;border-radius:8px;padding:10px;margin-bottom:8px;background:#221111;">`;
-        html += `<div style="font-weight:bold;color:#e74c3c;">${r.name}</div>`;
-        html += `<div style="font-size:12px;color:#888;">💪战力${r.strength} · 🏠${r.territory}街区 · ⭐声望${r.reputation}</div>`;
-        html += `<div style="font-size:11px;color:#666;">敌意: ${hostilityBar}</div>`;
+        const hostilityBar = '\uD83D\uDD34'.repeat(Math.ceil(r.hostile / 20)).padEnd(5, '\u26AA');
+        html += '<div style="border:1px solid #c0392b;border-radius:8px;padding:10px;margin-bottom:8px;background:#221111;" data-rival-id="' + r.id + '">';
+        html += '<div style="font-weight:bold;color:#e74c3c;">' + r.name + '</div>';
+        html += '<div style="font-size:12px;color:#888;">\uD83D\uDCAA战力' + r.strength + ' \u00B7 \uD83C\uDFE0' + r.territory + '街区 \u00B7 \u2B50声望' + r.reputation + '</div>';
+        html += '<div style="font-size:11px;color:#666;">敌意: ' + hostilityBar + '</div>';
         if (idleHitmen.length > 0 && data.state.ap > 0) {
-            html += '<div style="margin-top:4px;font-size:11px;color:#aaa;">派遣攻击:</div><div>';
+            html += '<div style="margin-top:4px;font-size:11px;color:#aaa;">勾选要派出的杀手（可多选，每人消耗1AP）:</div><div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:4px;">';
             idleHitmen.forEach(h => {
-                html += `<button class="btn btn-sm" onclick="doAttackRival(${r.id},${h.id})" style="margin:2px;font-size:11px;">${h.name}</button>`;
+                html += '<label style="border:1px solid #555;border-radius:6px;padding:4px 8px;font-size:11px;cursor:pointer;display:flex;align-items:center;gap:4px;">';
+                html += '<input type="checkbox" class="rival-hitman-cb" data-rival-id="' + r.id + '" data-hitman-id="' + h.id + '" style="accent-color:#e74c3c;">';
+                html += h.name + '</label>';
             });
             html += '</div>';
+            html += '<button class="btn btn-sm btn-danger" onclick="doMultiAttackRival(' + r.id + ')" style="margin-top:6px;width:100%;">\u2694\uFE0F 集体出击</button>';
         }
         html += '</div>';
     });
-    showModal('⚔️ 竞争对手', html || '<p style="color:#888;">城里已经没有活着的对手了。</p>');
+    html += '</div>';
+    showModal('\u2694\uFE0F 竞争对手', html || '<p style="color:#888;">城里已经没有活着的对手了。</p>');
 }
 
-async function doAttackRival(rivalId, hitmanId) {
+async function doMultiAttackRival(rivalId) {
+    const checkboxes = document.querySelectorAll('.rival-hitman-cb[data-rival-id="' + rivalId + '"]:checked');
+    const hitmanIds = Array.from(checkboxes).map(cb => parseInt(cb.dataset.hitmanId));
+    if (hitmanIds.length === 0) {
+        showToast('请至少勾选一个杀手');
+        return;
+    }
     closeModal();
-    const data = await apiCall('attack_rival', { rival_id: rivalId, hitman_id: hitmanId });
+    const data = await apiCall('attack_rival', { rival_id: rivalId, hitman_ids: hitmanIds });
     if (!data) return;
     updateStats(data.state);
     appendNarrative(data.narrative, 'system');
-}
-
-// --- 武器库 ---
+}// --- 武器库 ---
 async function handleWeaponShop() {
     modalState = 'weapon_shop';
     const data = await apiCall('weapon_shop');

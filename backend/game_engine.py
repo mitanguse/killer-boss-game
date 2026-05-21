@@ -988,8 +988,10 @@ class GameEngine:
         alive = [r for r in self.game_state["rivals"] if r["alive"]]
         return alive, f"枭展开情报地图：'城里还有 {len(alive)} 个组织在跟我们抢地盘。'"
 
-    def attack_rival(self, rival_id: int, hitman_id: int):
-        """派遣杀手攻击竞争对手"""
+    def attack_rival(self, rival_id: int, hitman_ids):
+        """派遣多个杀手攻击竞争对手"""
+        if isinstance(hitman_ids, int):
+            hitman_ids = [hitman_ids]
         rival = None
         for r in self.game_state["rivals"]:
             if r["id"] == rival_id and r["alive"]:
@@ -997,34 +999,37 @@ class GameEngine:
                 break
         if not rival:
             return "找不到这个目标。"
-        hitman = None
+        hitmen = []
         for h in self.game_state["hitmen"]:
-            if h["id"] == hitman_id and h["status"] == "idle":
-                hitman = h
-                break
-        if not hitman:
+            if h["id"] in hitman_ids and h["status"] == "idle":
+                hitmen.append(h)
+        if not hitmen:
             return "没有可派遣的杀手。"
-        if self.game_state["ap"] <= 0:
-            return "行动力不够了。"
-        self._modify_state("ap", -1)
-        # 计算攻击成功率
-        idle_count = sum(1 for m in self.game_state["hitmen"] if m["status"] == "idle")
-        total_skill = sum(m["skill"] for m in self.game_state["hitmen"])
-        player_power = idle_count * 5 + total_skill
+        if self.game_state["ap"] < len(hitmen):
+            return f"行动力不够，需要{len(hitmen)}点AP，当前只有{self.game_state['ap']}点。"
+        self._modify_state("ap", -len(hitmen))
+        # 计算攻击成功率（所有参战杀手总和）
+        total_skill = sum(h["skill"] for h in hitmen)
+        bonus = len(hitmen) * 3
+        player_power = total_skill + bonus
         success_chance = player_power / (player_power + rival["strength"])
-        success_chance = max(0.2, min(0.9, success_chance))
+        success_chance = max(0.2, min(0.95, success_chance))
+        names = "、".join(h["name"] for h in hitmen)
         if random.random() < success_chance:
             gained = rival["territory"] * 5000 + rival["reputation"] * 200
             self._modify_state("funds", gained)
             self._modify_state("reputation", 5)
             rival["alive"] = False
-            hitman["exp"] = hitman.get("exp", 0) + 50
-            self._check_level_up(hitman)
-            return f"行动成功！{rival['name']} 已被铲除，获得 ¥{gained}，声望 +5。"
+            for hitman in hitmen:
+                hitman["exp"] = hitman.get("exp", 0) + 50
+                hitman["missions_completed"] = hitman.get("missions_completed", 0) + 1
+                self._check_level_up(hitman)
+            return f"行动成功！{rival['name']} 已被铲除，获得 ¥{gained}，声望 +5。\n参与杀手：{names}。"
         else:
-            hitman["status"] = "injured"
+            injured = random.choice(hitmen)
+            injured["status"] = "injured"
             self._modify_state("reputation", -3)
-            return f"行动失败……{hitman['name']} 受伤了，声望 -3。"
+            return f"行动失败……{injured['name']} 受伤了，声望 -3。\n参与杀手：{names}。"
 
     def _rival_turn(self):
         """每个对手执行一次回合行动"""
