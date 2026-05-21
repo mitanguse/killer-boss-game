@@ -321,7 +321,7 @@ class GameEngine:
         if not hitmen:
             return None
         # 忠诚度低的更容易被挖
-        targets = [h for h in hitmen if h["loyalty"] <= 5]
+        targets = [m for m in hitmen if m["loyalty"] <= 5]
         if not targets:
             return None
         if random.random() < 0.4:  # 40%概率触发
@@ -493,7 +493,7 @@ class GameEngine:
                 new_hitman["mole_owner"] = random.choice(alive)["name"]
 
         # 建立关系网
-        existing = [h for h in self.game_state["hitmen"] if h["id"] != new_hitman["id"]]
+        existing = [m for m in self.game_state["hitmen"] if m["id"] != new_hitman["id"]]
         for other in existing:
             if random.random() < 0.4:
                 new_hitman["friends"].append(other["id"])
@@ -726,7 +726,7 @@ class GameEngine:
                             h["rivals"].append(o["id"])
                             o["rivals"].append(h["id"])
                         events.append((h["name"], f"和{o['name']}闹翻了，成了对头", "activity"))
-        h["activity_log"].append(act)
+            h["activity_log"].append(act)
         return events
 
     def end_day(self):
@@ -922,7 +922,7 @@ class GameEngine:
         """展示训练选项"""
         if self.game_state["ap"] <= 0:
             return [], "今天的行动力不够了，明天再练吧。"
-        hitmen = [h for h in self.game_state["hitmen"] if h["status"] == "idle"]
+        hitmen = [m for m in self.game_state["hitmen"] if m["status"] == "idle"]
         if not hitmen:
             return [], "没有空闲的杀手可以训练。"
         return TRAINING_OPTIONS, "枭拿出一份训练清单：'该让这些人活动活动筋骨了。'"
@@ -1053,7 +1053,7 @@ class GameEngine:
                     stolen["taken"] = True
                     events.append((rival["name"], f"抢走了契约「{stolen['name']}」"))
             elif action == "poach":
-                hitmen = [h for h in self.game_state["hitmen"] if h["loyalty"] <= 5]
+                hitmen = [m for m in self.game_state["hitmen"] if m["loyalty"] <= 5]
                 if hitmen and random.random() < 0.3:
                     target = random.choice(hitmen)
                     self.game_state["hitmen"].remove(target)
