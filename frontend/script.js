@@ -547,7 +547,7 @@ async function handleRecruit() {
                     </span>
                 </div>
                 <div class="cand-stats">
-                    <span>⚔️ 战力 ${c.skill}/5</span>
+                    <span>⚔️ 战力 ${c.skill}/50</span>
                     <span>❤️ 忠诚 ${c.loyalty}/10</span>
                     <span>📊 抽成 ${Math.round((c.cut||0.2)*100)}%</span>
                 </div>
@@ -1336,7 +1336,7 @@ function showHitmanDetail(hitman, cardEl) {
         <div class="hd-name">${hitman.name} <span style="font-size:12px;color:#888;">Lv.${lv}</span></div>
         ${legendTitle ? `<div style="color:var(--accent-gold);font-size:12px;margin-bottom:4px;">🏆 ${legendTitle}</div>` : ''}
         <div class="hd-row"><span>专长</span><span class="hd-val">${hitman.specialty}</span></div>
-        <div class="hd-row"><span>战力</span><span class="hd-val">⚔️ ${hitman.skill}/10</span></div>
+        <div class="hd-row"><span>战力</span><span class="hd-val">⚔️ ${hitman.skill}/50</span></div>
         <div class="hd-row"><span>忠诚</span><span class="hd-val">❤️ ${hitman.loyalty}/10</span></div>
         <div class="hd-row"><span>状态</span><span class="hd-val">${statusText(hitman.status)}</span></div>
         <div class="hd-row"><span>抽成</span><span class="hd-val">📊 ${Math.round((hitman.cut||0.2)*100)}%</span></div>
