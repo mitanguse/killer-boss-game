@@ -206,7 +206,7 @@ function renderHitmen(hitmen) {
         card.className = 'hitman-card';
         card.dataset.id = h.id;
 
-        const weaponName = h.weapon_id ? state.weapons?.find(w => w.id === h.weapon_id)?.name || '' : '';
+        const weaponName = h.weapon_id ? STATE.weapons?.find(w => w.id === h.weapon_id)?.name || '' : '';
         const lv = h.lv || 1;
         const exp = h.exp || 0;
         const needExp = lv * 50;
@@ -1194,8 +1194,8 @@ function showHitmanDetail(hitman, cardEl) {
     const lv = hitman.lv || 1;
     const exp = hitman.exp || 0;
     const needExp = lv * 50;
-    const weapon = hitman.weapon_id ? state.weapons?.find(w => w.id === hitman.weapon_id) : null;
-    const ownedWeapons = (state.weapons || []).filter(w => w.owned && !w.equipped_by);
+    const weapon = hitman.weapon_id ? STATE.weapons?.find(w => w.id === hitman.weapon_id) : null;
+    const ownedWeapons = (STATE.weapons || []).filter(w => w.owned && !w.equipped_by);
 
     // 传奇称号（Lv8解锁）
     const legendTitle = hitman.legend_title || '';
