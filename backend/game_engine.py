@@ -535,8 +535,6 @@ class GameEngine:
         """安全地修改游戏状态，带范围限制"""
         if key == "funds":
             self.game_state["funds"] = max(0, self.game_state["funds"] + amount)
-            if self.game_state["funds"] <= 0:
-                self.game_state["game_over"] = True
         elif key == "reputation":
             self.game_state["reputation"] = max(
                 0, min(self.game_state["max_reputation"],
