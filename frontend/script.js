@@ -5,6 +5,14 @@
  * 所有动作通过 POST /api/act 与后端交互。
  */
 
+
+// 生成/读取唯一会话ID（用于多人隔离）
+const SESSION_ID = localStorage.getItem('killer_boss_session') || (function(){
+    const id = 's' + Date.now() + '_' + Math.random().toString(36).substr(2, 6);
+    localStorage.setItem('killer_boss_session', id);
+    return id;
+})();
+
 // ============================================================
 // 状态
 // ============================================================
@@ -99,6 +107,8 @@ async function fetchWithTimeout(url, options, timeoutMs) {
 }
 
 async function apiCall(action, params = {}) {
+    params = params || {};
+    params.session_id = SESSION_ID;
     if (loading) return null;
     setLoading(true);
     try {
@@ -127,10 +137,12 @@ async function apiCall(action, params = {}) {
 }
 
 async function apiStart() {
+    // Pass session_id via query param since apiStart doesn't take params
+
     if (loading) return null;
     setLoading(true);
     try {
-        const resp = await fetchWithTimeout(`${API_BASE}/api/start`, { method: 'POST' });
+        const resp = await fetchWithTimeout(`${API_BASE}/api/start?session_id=${SESSION_ID}`, { method: 'POST' });
         if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
         const data = await resp.json();
         return data;
