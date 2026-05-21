@@ -1225,7 +1225,7 @@ class GameEngine:
     # ---- 洗钱系统（Lv4解锁） ----
 
     def show_laundry_options(self):
-        """显示洗钱选项"""
+        """显示洗钱选项（受阵营声望影响）"""
         if self.game_state["org_level"] < 4:
             return [], "组织等级不够（需要Lv.4城市暗流）。"
 
@@ -1233,25 +1233,73 @@ class GameEngine:
         if dirty <= 0:
             return [], "老板，最近账很干净，没有脏钱需要处理。"
 
+        factions_state = self.game_state.get("factions", {})
+        gang_rep = factions_state.get("gang", {}).get("value", 50)
+        politician_rep = factions_state.get("politician", {}).get("value", 50)
+        police_rep = factions_state.get("police", {}).get("value", 50)
+
         options = []
         for ch in LAUNDRY_CHANNELS:
-            can_afford_cost = self.game_state["funds"] >= ch["cost_per_batch"]
+            # 黑帮声望 < 30：赌场不可用
+            if ch["id"] == "casino" and gang_rep < 30:
+                options.append({
+                    "id": ch["id"],
+                    "name": ch["name"],
+                    "desc": ch["desc"],
+                    "cost": ch["cost_per_batch"],
+                    "actual_cost": ch["cost_per_batch"],
+                    "ap_cost": ch["ap_cost"],
+                    "clean_amount": 0,
+                    "clean_per_batch": ch["clean_per_batch"],
+                    "can_use": False,
+                    "unavailable_reason": "黑帮声望不足（<30），赌场不可用",
+                })
+                continue
+
+            # 黑帮声望 ≥ 70：赌场 clean_per_batch 从 0.8 → 1.0
+            clean_per_batch = ch["clean_per_batch"]
+            if ch["id"] == "casino" and gang_rep >= 70:
+                clean_per_batch = 1.0
+
+            # 政客声望影响费用
+            if politician_rep >= 70:
+                cost_mult = 0.5
+            elif politician_rep >= 40:
+                cost_mult = 1.0
+            else:
+                cost_mult = 1.5
+            actual_cost = int(ch["cost_per_batch"] * cost_mult)
+
+            can_afford_cost = self.game_state["funds"] >= actual_cost
             can_afford_ap = self.game_state["ap"] >= ch["ap_cost"]
             can_use = can_afford_cost and can_afford_ap
-            clean_amount = int(dirty * ch["clean_per_batch"])
+            clean_amount = int(dirty * clean_per_batch)
+
+            # 警方声望 → 风险提示
+            if police_rep >= 70:
+                risk_hint = "低风险（警方声望≥70）"
+            elif police_rep >= 40:
+                risk_hint = "中等风险（警方声望40~70）"
+            else:
+                risk_hint = "高风险（警方声望<40）"
+
             options.append({
                 "id": ch["id"],
                 "name": ch["name"],
                 "desc": ch["desc"],
                 "cost": ch["cost_per_batch"],
+                "actual_cost": actual_cost,
                 "ap_cost": ch["ap_cost"],
+                "clean_per_batch": clean_per_batch,
                 "clean_amount": clean_amount,
                 "can_use": can_use,
+                "risk_hint": risk_hint,
+                "cost_mult_display": f"×{cost_mult}" if cost_mult != 1.0 else "",
             })
         return options, f"枭递上账本：'老板，账上有 ¥{dirty} 脏钱需要处理。'"
 
     def do_laundry(self, channel_id: str):
-        """执行洗钱"""
+        """执行洗钱（受阵营声望影响：警方→风险，政客→费用，黑帮→赌场收益）"""
         if self.game_state["org_level"] < 4:
             return "组织等级不够。"
 
@@ -1263,25 +1311,71 @@ class GameEngine:
         if not channel:
             return "无效的洗钱渠道。"
 
+        factions_state = self.game_state.get("factions", {})
+        gang_rep = factions_state.get("gang", {}).get("value", 50)
+        politician_rep = factions_state.get("politician", {}).get("value", 50)
+        police_rep = factions_state.get("police", {}).get("value", 50)
+
+        # 黑帮声望 < 30：赌场不可用
+        if channel["id"] == "casino" and gang_rep < 30:
+            return f"黑帮声望不足（当前{gang_rep}，需要≥30），赌场渠道不可用。"
+
         dirty = self.game_state.get("dirty_money", 0)
         if dirty <= 0:
             return "没有脏钱需要洗。"
 
-        if self.game_state["funds"] < channel["cost_per_batch"]:
-            return f"资金不够，需要 ¥{channel['cost_per_batch']} 作为运营成本。"
+        # 政客声望影响实际费用
+        if politician_rep >= 70:
+            cost_mult = 0.5
+        elif politician_rep >= 40:
+            cost_mult = 1.0
+        else:
+            cost_mult = 1.5
+        actual_cost = int(channel["cost_per_batch"] * cost_mult)
+
+        if self.game_state["funds"] < actual_cost:
+            return f"资金不够，需要 ¥{actual_cost} 作为运营成本（政客声望影响后）。"
 
         if self.game_state["ap"] < channel["ap_cost"]:
             return "行动力不够。"
 
-        clean_amount = int(dirty * channel["clean_per_batch"])
+        # 黑帮声望 ≥ 70：赌场 clean_per_batch 从 0.8 → 1.0
+        clean_per_batch = channel["clean_per_batch"]
+        if channel["id"] == "casino" and gang_rep >= 70:
+            clean_per_batch = 1.0
+
+        clean_amount = int(dirty * clean_per_batch)
         actual_clean = min(clean_amount, dirty)
 
-        self._modify_state("funds", -channel["cost_per_batch"])
-        self._modify_state("ap", -channel["ap_cost"])
-        self.game_state["dirty_money"] = dirty - actual_clean
-        self._modify_state("funds", actual_clean)
+        # 警方声望 → 风险控制
+        audited = False
+        if police_rep < 40:
+            if random.random() < 0.4:
+                audited = True
+        elif police_rep < 70:
+            if random.random() < 0.2:
+                audited = True
+        # police_rep >= 70: 零风险，不检查
 
-        return f"通过{channel['name']}洗白了 ¥{actual_clean}，消耗 ¥{channel['cost_per_batch']}+{channel['ap_cost']}AP。剩余脏钱：¥{self.game_state['dirty_money']}。"
+        # 先扣成本
+        self._modify_state("funds", -actual_cost)
+        self._modify_state("ap", -channel["ap_cost"])
+
+        cost_line = f"消耗 ¥{actual_cost}（政客声望倍率×{cost_mult}）" if cost_mult != 1.0 else f"消耗 ¥{actual_cost}"
+
+        if audited:
+            # 被查：声誉-3，脏钱不减少（钱被没收）
+            self._modify_state("reputation", -3)
+            return (
+                f"⚠️ 洗钱被查！\n"
+                f"通过{channel['name']}洗钱时被警方突袭，¥{actual_clean} 全部没收！\n"
+                f"声望 -3，{cost_line}+{channel['ap_cost']}AP。\n"
+                f"剩余脏钱：¥{self.game_state['dirty_money']}。"
+            )
+        else:
+            self.game_state["dirty_money"] = dirty - actual_clean
+            self._modify_state("funds", actual_clean)
+            return f"通过{channel['name']}洗白了 ¥{actual_clean}，{cost_line}+{channel['ap_cost']}AP。剩余脏钱：¥{self.game_state['dirty_money']}。"
 
     # ---- 投资系统（Lv6解锁） ----
 

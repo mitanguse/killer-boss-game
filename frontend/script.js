@@ -1087,10 +1087,31 @@ async function handleLaundry() {
 
     let html = `<p style="margin-bottom:8px;color:var(--text-secondary);">当前脏钱：<span style="color:var(--accent-gold);">¥${dirty.toLocaleString()}</span></p>`;
     options.forEach(o => {
+        if (o.unavailable_reason) {
+            // 赌场因黑帮声望不可用
+            html += `<div style="border:1px solid #666;border-radius:8px;padding:10px;margin-bottom:8px;opacity:0.5;">
+                <div style="font-weight:bold;">${o.name} 🚫</div>
+                <div style="font-size:12px;color:#888;">${o.desc}</div>
+                <div style="font-size:11px;color:#e74c3c;margin-top:4px;">⛔ ${o.unavailable_reason}</div>
+                <button class="btn btn-sm" disabled style="margin-top:4px;width:100%;">不可用</button>
+            </div>`;
+            return;
+        }
+        const costDisplay = o.actual_cost !== o.cost
+            ? `<span style="text-decoration:line-through;color:#666;">¥${o.cost.toLocaleString()}</span> <span style="color:var(--accent-gold);">¥${o.actual_cost.toLocaleString()}</span>`
+            : `<span>¥${o.cost.toLocaleString()}</span>`;
+        const multTag = o.cost_mult_display ? `<span style="font-size:10px;color:#888;margin-left:4px;">(${o.cost_mult_display})</span>` : '';
+
         html += `<div style="border:1px solid #444;border-radius:8px;padding:10px;margin-bottom:8px;">
             <div style="font-weight:bold;">${o.name}</div>
             <div style="font-size:12px;color:#888;">${o.desc}</div>
-            <div style="font-size:12px;color:var(--accent-gold);">预计洗白：¥${o.clean_amount.toLocaleString()}</div>
+            <div style="font-size:12px;color:var(--accent-gold);">预计洗白：¥${o.clean_amount.toLocaleString()}${o.clean_per_batch && o.clean_per_batch !== 0.8 ? ` (${Math.round(o.clean_per_batch*100)}%)` : ''}</div>
+            <div style="font-size:11px;color:#bbb;">运营成本：${costDisplay}${multTag} · ⚡${o.ap_cost}AP</div>
+            <div style="font-size:11px;margin-top:2px;">
+                <span style="color:${o.risk_hint && o.risk_hint.includes('低') ? '#27ae60' : o.risk_hint && o.risk_hint.includes('高') ? '#e74c3c' : '#d4a017'};">
+                    ${o.risk_hint || ''}
+                </span>
+            </div>
             ${o.can_use
                 ? `<button class="btn btn-sm" onclick="doLaundry('${o.id}')" style="margin-top:4px;width:100%;">🧺 洗钱</button>`
                 : `<button class="btn btn-sm" disabled style="margin-top:4px;width:100%;">条件不足</button>`
