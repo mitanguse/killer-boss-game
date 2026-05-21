@@ -662,6 +662,11 @@ async function doPickupEncounter() {
 
 async function handleSave() {
     const slot = 1;
+    // localStorage存档
+    try {
+        localStorage.setItem('killer_boss_save_' + slot, JSON.stringify(STATE));
+        showToast('\u5B58\u6863\u6210\u529F \u2705');
+    } catch(e) {}
     const data = await apiCall('save', { slot });
     if (!data) return;
     let msg = data.narrative || `💾 存档已保存（第${slot}栏）`;
