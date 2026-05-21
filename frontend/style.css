@@ -955,8 +955,13 @@ html, body {
         padding: 2px 8px;
     }
 
-    #app, #game-ui {
+    #app {
+        height: auto;
         min-height: 100dvh;
+        overflow-y: auto;
+    }
+    #game-ui {
+        min-height: 0;
         height: auto;
         overflow-y: auto;
     }
@@ -1032,7 +1037,6 @@ html, body {
         flex-wrap: wrap;
         gap: 4px;
         padding: 6px 4px;
-        max-height: none;
         overflow: visible;
     }
     .btn {
