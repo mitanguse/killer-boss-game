@@ -125,14 +125,15 @@ def perform_action(req: ActRequest):
             )
 
         elif action == "assign_contract":
+            contract_id = params.get("contract_id")
             contract_index = params.get("contract_index")
             hitman_id = params.get("hitman_id")
-            if contract_index is None or hitman_id is None:
+            if hitman_id is None or (contract_id is None and contract_index is None):
                 return StateResponse(
                     error="请选择契约和派遣的杀手。",
                     state=engine.get_state(),
                 )
-            narrative, success = engine.assign_contract(contract_index, hitman_id)
+            narrative, success = engine.assign_contract(contract_index, hitman_id, contract_id)
             return StateResponse(
                 narrative=narrative,
                 state=engine.get_state(),

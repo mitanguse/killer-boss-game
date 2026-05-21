@@ -521,19 +521,27 @@ class GameEngine:
         narrative += f"当前有 {len(available)} 个可用契约，难度从简单到致命不等。"
         return available, narrative
 
-    def assign_contract(self, contract_index: int, hitman_id: int):
+    def assign_contract(self, contract_index=None, hitman_id=None, contract_id=None):
         """派遣杀手执行契约"""
         contracts = self.game_state["contracts"]
-        if contract_index < 0 or contract_index >= len(contracts):
-            return "无效的契约。", False
+        if contract_id is not None:
+            contract = None
+            for c in contracts:
+                if c["id"] == contract_id:
+                    contract = c
+                    break
+            if not contract:
+                return "找不到这个契约。", False
+        else:
+            available = [c for c in contracts if not c.get("taken")]
+            if contract_index is None or contract_index < 0 or contract_index >= len(available):
+                return "无效的契约。", False
+            contract = available[contract_index]
 
-        contract = contracts[contract_index]
         if contract.get("taken"):
             return "这个契约已经被执行了。", False
 
-        # 找杀手
-        hitman = None
-        for h in self.game_state["hitmen"]:
+        # 找杀手in self.game_state["hitmen"]:
             if h["id"] == hitman_id and h["status"] == "idle":
                 hitman = h
                 break
