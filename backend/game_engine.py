@@ -2099,7 +2099,7 @@ class GameEngine:
                 model="deepseek-chat",
                 messages=messages,
                 temperature=0.85,
-                max_tokens=512,
+                max_tokens=192,
             )
             text = response.choices[0].message.content.strip()
         except Exception as e:
