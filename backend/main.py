@@ -281,6 +281,14 @@ def perform_action(req: ActRequest):
                 state=engine.get_state(),
             )
 
+        elif action == "leaderboard":
+            ranking = engine.get_leaderboard()
+            return StateResponse(
+                narrative="",
+                state=engine.get_state(),
+                extra={"ranking": ranking},
+            )
+
         elif action == "reset":
             engine.reset_game()
             engine.reset_game()

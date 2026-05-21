@@ -1077,6 +1077,31 @@ class GameEngine:
         }
         return f"\n\n🤝 你在街头遇到了一个有意思的人：{name}（{spec}，战力{skill}）。花 ¥{cost} 可以招募他。"
 
+    def get_leaderboard(self):
+        """获取杀手排行榜（按战力评分排序）"""
+        ranking = []
+        for h in self.game_state["hitmen"]:
+            weapon_bonus = 0
+            if h.get("weapon_id"):
+                for w in self.game_state["weapons"]:
+                    if w["id"] == h["weapon_id"]:
+                        weapon_bonus = w.get("bonus", 0)
+                        break
+            power = h["skill"] + weapon_bonus + h.get("lv", 1) * 0.5
+            ranking.append({
+                "id": h["id"],
+                "name": h["name"],
+                "specialty": h["specialty"],
+                "skill": h["skill"],
+                "lv": h.get("lv", 1),
+                "weapon_bonus": weapon_bonus,
+                "power": round(power, 1),
+                "missions": h.get("missions_completed", 0),
+                "status": h["status"],
+            })
+        ranking.sort(key=lambda x: x["power"], reverse=True)
+        return ranking
+
     def pickup_encounter(self):
         """捡人"""
         enc = self._action_context.pop("encounter", None)
