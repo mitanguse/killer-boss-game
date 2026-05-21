@@ -197,6 +197,8 @@ function updateStats(state) {
 
     // Buttons
     updateButtons(state);
+    // 自动存到 localStorage（防 Render 重启丢数据）
+    try { localStorage.setItem('killer_boss_autosave', JSON.stringify(state)); } catch(e) {}
 }
 
 function renderHitmen(hitmen) {
