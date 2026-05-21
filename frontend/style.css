@@ -956,8 +956,9 @@ html, body {
     }
 
     #app, #game-ui {
-        height: 100dvh;
-        overflow: hidden;
+        min-height: 100dvh;
+        height: auto;
+        overflow-y: auto;
     }
     #game-ui.hidden { display: none !important; }
 
