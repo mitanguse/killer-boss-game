@@ -408,6 +408,26 @@ def perform_action(req: ActRequest):
                 extra={"factions": factions},
             )
 
+        elif action == "faction_missions":
+            missions, error = eng.get_faction_missions()
+            if error:
+                return StateResponse(error=error, state=eng.get_state())
+            return StateResponse(
+                narrative="",
+                state=eng.get_state(),
+                extra={"missions": missions},
+            )
+
+        elif action == "faction_mission":
+            mission_id = params.get("mission_id")
+            if not mission_id:
+                return StateResponse(error="请选择任务。", state=eng.get_state())
+            narrative = eng.execute_faction_mission(mission_id)
+            return StateResponse(
+                narrative=narrative,
+                state=eng.get_state(),
+            )
+
         elif action == "laundry":
             options, narrative = eng.show_laundry_options()
             return StateResponse(

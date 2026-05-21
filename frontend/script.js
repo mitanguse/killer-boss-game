@@ -972,7 +972,99 @@ async function handleFactions() {
         `;
     });
 
+    html += '<hr style="border-color:var(--border);margin:16px 0;">';
+    html += '<p style="margin-bottom:12px;color:var(--text-secondary);">🎯 阵营任务（为阵营办事影响各方关系）：</p>';
+
     showModal('🏛️ 阵营声望', html);
+
+    // 异步加载任务列表
+    loadFactionMissions();
+}
+
+async function loadFactionMissions() {
+    const data = await apiCall('faction_missions');
+    if (!data) return;
+
+    const missions = data.extra?.missions || {};
+    const factions = data.state?.factions || {};
+
+    let html = '<p style="margin-bottom:12px;color:var(--text-secondary);">城市各方势力对你的态度：</p>';
+
+    const factionInfo = {
+        police: { icon: '🚔', name: '警方', color: '#2980b9', desc: '高→不查你，低→经常突袭' },
+        gang: { icon: '🔫', name: '黑帮', color: '#e74c3c', desc: '高→更多合约，低→被攻击' },
+        politician: { icon: '🎩', name: '政客', color: '#d4a017', desc: '高→政治庇护，低→被施压' },
+    };
+
+    // 声望条
+    Object.entries(factions).forEach(([key, val]) => {
+        const info = factionInfo[key] || { icon: '❓', name: key, color: '#888', desc: '' };
+        const pct = (val.value / val.max) * 100;
+        const barColor = pct > 60 ? '#27ae60' : pct > 30 ? '#d4a017' : '#c0392b';
+        html += `
+            <div style="border:1px solid ${info.color};border-radius:8px;padding:12px;margin-bottom:10px;background:rgba(0,0,0,0.3);">
+                <div style="font-weight:bold;color:${info.color};">${info.icon} ${info.name}：${val.value}/${val.max}</div>
+                <div style="margin-top:4px;height:8px;background:#2a2a3a;border-radius:4px;overflow:hidden;">
+                    <div style="height:100%;width:${pct}%;background:${barColor};border-radius:4px;transition:width 0.5s;"></div>
+                </div>
+                <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">${info.desc}</div>
+            </div>
+        `;
+    });
+
+    html += '<hr style="border-color:var(--border);margin:16px 0;">';
+    html += '<p style="margin-bottom:12px;color:var(--text-secondary);">🎯 阵营任务（为阵营办事影响各方关系）：</p>';
+
+    const factionOrder = ['police', 'gang', 'politician'];
+    factionOrder.forEach(facKey => {
+        const info = factionInfo[facKey] || { icon: '❓', name: facKey, color: '#888' };
+        const facMissions = missions[facKey] || [];
+        if (facMissions.length === 0) return;
+
+        html += `<div style="margin-top:12px;font-weight:bold;color:${info.color};font-size:14px;">${info.icon} ${info.name}任务</div>`;
+
+        facMissions.forEach(m => {
+            // 构建声望变化文本
+            let repChanges = `<span style="color:var(--accent-green);">${info.name}+${m.rep_gain}</span>`;
+            if (m.rep_loss && m.rep_loss.police) {
+                repChanges += ` <span style="color:var(--accent-red);">警方${m.rep_loss.police}</span>`;
+            }
+            if (m.rep_loss && m.rep_loss.gang) {
+                repChanges += ` <span style="color:var(--accent-red);">黑帮${m.rep_loss.gang}</span>`;
+            }
+            if (m.rep_loss && m.rep_loss.politician) {
+                repChanges += ` <span style="color:var(--accent-red);">政客${m.rep_loss.politician}</span>`;
+            }
+
+            const apOk = data.state.ap >= m.ap;
+            html += `
+                <div style="border:1px solid #444;border-radius:8px;padding:10px;margin-bottom:8px;">
+                    <div style="font-weight:bold;">${m.name}</div>
+                    <div style="font-size:12px;color:#888;margin-top:2px;">${m.desc}</div>
+                    <div style="font-size:12px;margin-top:4px;">
+                        <span>⚡${m.ap} AP</span>
+                        <span>💰 ${formatMoney(m.funds)}</span>
+                        <span>${repChanges}</span>
+                    </div>
+                    ${m.min_rep > 0 ? `<div style="font-size:11px;color:var(--accent-gold);">需要${info.name}声望 ≥ ${m.min_rep}</div>` : ''}
+                    ${apOk
+                        ? `<button class="btn btn-sm btn-gold" onclick="doFactionMission('${m.id}')" style="margin-top:4px;width:100%;">执行任务 ➤</button>`
+                        : `<button class="btn btn-sm" disabled style="margin-top:4px;width:100%;">AP不足</button>`
+                    }
+                </div>
+            `;
+        });
+    });
+
+    dom.modalBody.innerHTML = html;
+}
+
+async function doFactionMission(missionId) {
+    closeModal();
+    const data = await apiCall('faction_mission', { mission_id: missionId });
+    if (!data) return;
+    updateStats(data.state);
+    appendNarrative(data.narrative, 'system');
 }
 
 // --- 洗钱 ---

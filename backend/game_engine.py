@@ -151,6 +151,27 @@ FACTIONS = {
 }
 
 # ============================================================
+# 阵营任务数据
+# ============================================================
+
+FACTION_MISSIONS = [
+    # 警方任务
+    {"id": "police_1", "faction": "police", "name": "卧底交易", "desc": "协助警方与黑帮线人接头，换取警方的信任。", "ap": 1, "rep_gain": 10, "rep_loss": {"gang": -5}, "funds": 5000, "min_rep": 0},
+    {"id": "police_2", "faction": "police", "name": "保护污点证人", "desc": "暗中保护一位即将出庭作证的污点证人，确保他不被黑帮灭口。", "ap": 1, "rep_gain": 15, "rep_loss": {"gang": -3}, "funds": 8000, "min_rep": 0},
+    {"id": "police_3", "faction": "police", "name": "协助缉毒行动", "desc": "配合警方对地下毒品加工厂进行突击行动，打击黑帮的毒品生意。", "ap": 2, "rep_gain": 20, "rep_loss": {"gang": -8}, "funds": 12000, "min_rep": 30},
+
+    # 黑帮任务
+    {"id": "gang_1", "faction": "gang", "name": "押送私酒", "desc": "护送一批私酒从港口安全运到城内仓库，路上可能有警方检查站。", "ap": 1, "rep_gain": 10, "rep_loss": {"police": -5}, "funds": 6000, "min_rep": 0},
+    {"id": "gang_2", "faction": "gang", "name": "抢地盘火并", "desc": "带人扫平敌对帮派的一个据点，扩大自己的地盘。", "ap": 1, "rep_gain": 15, "rep_loss": {"police": -8}, "funds": 10000, "min_rep": 0},
+    {"id": "gang_3", "faction": "gang", "name": "军火交易护卫", "desc": "为一起大规模军火交易提供武装护卫，防止黑吃黑和警方突袭。", "ap": 2, "rep_gain": 20, "rep_loss": {"police": -10}, "funds": 15000, "min_rep": 30},
+
+    # 政客任务
+    {"id": "politician_1", "faction": "politician", "name": "竞选筹款", "desc": "通过地下渠道为有合作的政客筹集竞选资金，换取政治保护。", "ap": 1, "rep_gain": 10, "rep_loss": {"gang": -3}, "funds": 5000, "min_rep": 0},
+    {"id": "politician_2", "faction": "politician", "name": "抹黑对手", "desc": "收集对手的黑料并通过媒体散布，帮盟友政客打击竞选对手。", "ap": 1, "rep_gain": 15, "rep_loss": {"gang": -5}, "funds": 8000, "min_rep": 0},
+    {"id": "politician_3", "faction": "politician", "name": "议会游说", "desc": "安排盟友政客与关键议员秘密会面，推动有利法案通过。", "ap": 2, "rep_gain": 20, "rep_loss": {"police": -5}, "funds": 12000, "min_rep": 30},
+]
+
+# ============================================================
 # 洗钱渠道
 # ============================================================
 
@@ -460,6 +481,15 @@ class GameEngine:
     def _generate_contracts(self, count=3):
         rep = self.game_state["reputation"]
         templates = [t for t in CONTRACT_TEMPLATES if t[4] <= rep]
+
+        # 黑帮声望 > 80 → 更多高赏金契约
+        gang_rep = self.game_state.get("factions", {}).get("gang", {}).get("value", 50)
+        if gang_rep > 80:
+            high_bounty = [t for t in CONTRACT_TEMPLATES if t[4] > 20 and t[4] <= rep]
+            if high_bounty:
+                extra = random.sample(high_bounty, min(len(high_bounty), 2))
+                templates.extend(extra)
+
         if len(templates) < count:
             templates = CONTRACT_TEMPLATES
         selected = random.sample(templates, min(count, len(templates)))
@@ -515,8 +545,31 @@ class GameEngine:
         return None
 
     def _trigger_random_event(self):
-        """触发随机事件，返回事件信息"""
-        event_template = random.choice(EVENTS)
+        """触发随机事件，返回事件信息（受阵营声望影响权重）"""
+        factions = self.game_state.get("factions", {})
+        police_rep = factions.get("police", {}).get("value", 50)
+        gang_rep = factions.get("gang", {}).get("value", 50)
+        politician_rep = factions.get("politician", {}).get("value", 50)
+
+        # 根据阵营声望调整事件权重
+        weights = []
+        for evt in EVENTS:
+            w = 1.0
+            if evt["type"] == "police" and police_rep < 20:
+                w = 3.0  # 警方声望低 → 增加警方突袭概率
+            elif evt["type"] == "police" and police_rep > 80:
+                w = 0.3  # 警方声望高 → 减少负面事件概率
+            elif evt["type"] == "competitor" and gang_rep < 20:
+                w = 2.5  # 黑帮声望低 → 增加挑衅概率
+            elif evt["type"] == "tax" and politician_rep < 20:
+                w = 2.5  # 政客声望低 → 增加被罚款概率
+            elif evt["type"] == "windfall" and politician_rep > 80:
+                w = 2.0  # 政客声望高 → 政治庇护带来更多收益
+            elif evt["type"] == "opportunity" and gang_rep > 80:
+                w = 2.0  # 黑帮声望高 → 更多意外机遇
+            weights.append(w)
+
+        event_template = random.choices(EVENTS, weights=weights, k=1)[0]
         event = dict(event_template)
 
         for key, val in event["effect"].items():
@@ -1098,6 +1151,76 @@ class GameEngine:
             return
         faction = self.game_state["factions"][faction_id]
         faction["value"] = max(0, min(faction["max"], faction["value"] + amount))
+
+    # ---- 阵营任务系统（Lv4解锁） ----
+
+    def get_faction_missions(self):
+        """获取当前可接的阵营任务（根据声望要求过滤）"""
+        if self.game_state["org_level"] < 4:
+            return None, "组织等级不够（需要Lv.4城市暗流）。"
+
+        factions_state = self.game_state["factions"]
+        result = {"police": [], "gang": [], "politician": []}
+
+        for mission in FACTION_MISSIONS:
+            fac = mission["faction"]
+            current_rep = factions_state[fac]["value"]
+            if current_rep >= mission["min_rep"]:
+                result[fac].append(mission)
+
+        return result, None
+
+    def execute_faction_mission(self, mission_id: str):
+        """执行一个阵营任务"""
+        if self.game_state["org_level"] < 4:
+            return "组织等级不够（需要Lv.4城市暗流）。"
+
+        # 查找任务
+        mission = None
+        for m in FACTION_MISSIONS:
+            if m["id"] == mission_id:
+                mission = m
+                break
+        if not mission:
+            return "无效的任务ID。"
+
+        # 检查AP
+        if self.game_state["ap"] < mission["ap"]:
+            return f"行动力不够，需要 {mission['ap']} AP，当前只有 {self.game_state['ap']}。"
+
+        # 检查声望要求
+        fac = mission["faction"]
+        current_rep = self.game_state["factions"][fac]["value"]
+        if current_rep < mission["min_rep"]:
+            return f"{FACTIONS[fac]['name']}声望不够，需要 {mission['min_rep']} 点。"
+
+        # 消耗AP
+        self._modify_state("ap", -mission["ap"])
+
+        # 增加主阵营声望
+        self._modify_faction(fac, mission["rep_gain"])
+
+        # 减少受影响阵营声望
+        for loss_fac, loss_amt in mission["rep_loss"].items():
+            self._modify_faction(loss_fac, loss_amt)
+
+        # 增加资金
+        self._modify_state("funds", mission["funds"])
+
+        # 增加声望（组织声望）
+        self._modify_state("reputation", 2)
+
+        # 构建损失阵营描述
+        loss_texts = []
+        for loss_fac, loss_amt in mission["rep_loss"].items():
+            loss_texts.append(f"{FACTIONS[loss_fac]['name']}声望 {loss_amt:+d}")
+        loss_str = "，" .join(loss_texts)
+
+        return (
+            f"✅ 完成阵营任务「{mission['name']}」！\n"
+            f"{FACTIONS[fac]['name']}声望 +{mission['rep_gain']}，{loss_str}\n"
+            f"获得 ¥{mission['funds']}，剩余AP：{self.game_state['ap']}。"
+        )
 
     # ---- 洗钱系统（Lv4解锁） ----
 
