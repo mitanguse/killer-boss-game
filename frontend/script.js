@@ -84,7 +84,7 @@ const dom = {
 // API 调用
 // ============================================================
 
-const TIMEOUT_MS = 25000;
+const TIMEOUT_MS = 60000;
 
 async function fetchWithTimeout(url, options, timeoutMs) {
     timeoutMs = timeoutMs || TIMEOUT_MS;
@@ -170,6 +170,12 @@ function updateStats(state) {
         const dot = document.createElement('div');
         dot.className = `ap-dot ${i < state.ap ? 'filled' : 'empty'}`;
         dom.statApDots.appendChild(dot);
+    }
+
+    // Intel display (in stats panel, add if element exists)
+    const intelEl = $('#stat-intel');
+    if (intelEl) {
+        intelEl.textContent = state.intel || 0;
     }
 
     dom.statDay.textContent = `第 ${state.day} 天`;
@@ -555,6 +561,17 @@ function handleFireHitman(hitmanId) {
     apiCallAndRefresh('fire', { hitman_id: hitmanId });
 }
 
+// --- 发奖金提升忠诚 ---
+async function handleBoostLoyal(hitmanId) {
+    if (!confirm('给这名杀手发 ¥5,000 奖金提升忠诚度？（消耗1AP）')) return;
+    dom.hitmanDetail.classList.add('hidden');
+    const data = await apiCall('boost_loyal', { hitman_id: hitmanId });
+    if (!data) return;
+    updateStats(data.state);
+    appendNarrative(data.narrative, 'system');
+    setLoading(false);
+}
+
 // --- 装备/卸下武器 ---
 async function doEquipWeapon(hitmanId, weaponId) {
     dom.hitmanDetail.classList.add('hidden');
@@ -799,6 +816,20 @@ async function handleDevelop() {
         </div>`;
     }
 
+    // 情报出售 (always available if intel > 0)
+    const intelCount = STATE.intel || 0;
+    if (intelCount >= 10) {
+        html += `<div class="candidate-card" onclick="handleSellIntel()" style="cursor:pointer;">
+            <div><strong>📡 出售情报 <span style="color:var(--accent-gold);">情报: ${intelCount}点</span></strong></div>
+            <div style="font-size:12px;color:var(--text-muted);">消耗10点情报换资金（消耗1AP）</div>
+        </div>`;
+    } else if (intelCount > 0) {
+        html += `<div class="candidate-card" style="opacity:0.6;">
+            <div><strong>📡 情报不足 <span style="color:var(--accent-gold);">情报: ${intelCount}点</span></strong></div>
+            <div style="font-size:12px;color:var(--text-muted);">需要至少10点情报才能出售（空闲杀手每天自动产出）</div>
+        </div>`;
+    }
+
     // 洗钱 (Lv4+)
     if (orgLevel >= 4) {
         const dirty = STATE.dirty_money || 0;
@@ -829,6 +860,16 @@ async function handleDevelop() {
     }
 
     showModal('🏗️ 发展', html);
+}
+
+// --- 出售情报 ---
+async function handleSellIntel() {
+    closeModal();
+    const data = await apiCall('sell_intel');
+    if (!data) return;
+    updateStats(data.state);
+    appendNarrative(data.narrative, 'system');
+    setLoading(false);
 }
 
 // --- 安全屋 ---
@@ -1137,8 +1178,10 @@ function showHitmanDetail(hitman, cardEl) {
     const orgLevel = STATE.org_level;
 
     let fireBtnHtml = '';
+    let boostBtnHtml = '';
     if (hitman.status === 'idle') {
         fireBtnHtml = `<button class="btn btn-danger btn-sm" onclick="handleFireHitman(${hitman.id})">🔥 解雇</button>`;
+        boostBtnHtml = `<button class="btn btn-sm" onclick="handleBoostLoyal(${hitman.id})" style="background:var(--accent-gold);color:#111;">💰 发奖金</button>`;
     }
 
     const lv = hitman.lv || 1;
@@ -1169,6 +1212,7 @@ function showHitmanDetail(hitman, cardEl) {
 
     html += `<div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border);">
         ${fireBtnHtml}
+        ${boostBtnHtml}
         <button class="btn btn-sm" onclick="doInvestigate(${hitman.id})" style="margin-top:4px;width:100%;">🔍 调查内奸</button>
         ${weapon ? `<button class="btn btn-sm" onclick="doUnequipWeapon(${hitman.id})" style="margin-top:4px;width:100%;">🔧 卸下武器</button>` : ''}
         ${ownedWeapons.length > 0 && hitman.status === 'idle' ? ownedWeapons.map(w => `<button class="btn btn-sm" onclick="doEquipWeapon(${hitman.id},${w.id})" style="margin:2px;">🔫 ${w.name}(${w.rarity})</button>`).join('') : ''}

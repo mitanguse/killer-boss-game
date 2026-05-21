@@ -182,6 +182,23 @@ def perform_action(req: ActRequest):
                 state=engine.get_state(),
             )
 
+        elif action == "boost_loyal":
+            hitman_id = params.get("hitman_id")
+            if hitman_id is None:
+                return StateResponse(error="请选择要发奖金的杀手。", state=engine.get_state())
+            narrative = engine.boost_loyal(hitman_id)
+            return StateResponse(
+                narrative=narrative,
+                state=engine.get_state(),
+            )
+
+        elif action == "sell_intel":
+            narrative = engine.sell_intel()
+            return StateResponse(
+                narrative=narrative,
+                state=engine.get_state(),
+            )
+
         elif action == "end_day":
             result = engine.end_day()
             narrative, event, encounter, upgrade = result

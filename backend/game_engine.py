@@ -347,6 +347,9 @@ class GameEngine:
                 "intel_room": 0,
                 "interrogation_room": 0,
             },
+            # 情报
+            "intel": 0,
+            "intel_level": 1,
             # 阵营声望
             "factions": {
                 "police": {"value": 50, "max": 100},
@@ -885,6 +888,51 @@ class GameEngine:
             f"解雇了杀手{hitman['name']}（{hitman['specialty']}，战力{hitman['skill']}）"
         )
         return narrative
+
+    def boost_loyal(self, hitman_id: int):
+        """发奖金提升忠诚度"""
+        hitman = None
+        for h in self.game_state["hitmen"]:
+            if h["id"] == hitman_id:
+                hitman = h
+                break
+        if not hitman:
+            return "找不到这个杀手。"
+        if hitman["status"] != "idle":
+            return "这个杀手不在空闲状态，暂时发不了奖金。"
+        if self.game_state["funds"] < 5000:
+            return "资金不够发奖金，最少需要 ¥5,000。"
+        if self.game_state["ap"] <= 0:
+            return "今天的行动力不够了。"
+        
+        cost = 5000
+        self._modify_state("funds", -cost)
+        self._modify_state("ap", -1)
+        
+        # 随机提升忠诚度 1-3 点
+        gain = random.randint(1, 3)
+        hitman["loyalty"] = min(10, hitman["loyalty"] + gain)
+        
+        return f"{hitman['name']} 收到了 ¥{cost} 奖金，忠诚度 +{gain}！当前忠诚度：{hitman['loyalty']}/10"
+
+    def sell_intel(self):
+        """出售情报换取资金"""
+        intel = self.game_state.get("intel", 0)
+        if intel < 10:
+            return f"情报不够出售，当前情报 {intel}，需要至少 10 点情报。"
+        if self.game_state["ap"] <= 0:
+            return "今天的行动力不够了。"
+        
+        # 消耗10点情报换资金，每点情报价值500
+        sell_amount = 10
+        price_per_intel = 500 + self.game_state["org_level"] * 100
+        total_gain = sell_amount * price_per_intel
+        
+        self.game_state["intel"] = intel - sell_amount
+        self._modify_state("ap", -1)
+        self._modify_state("funds", total_gain)
+        
+        return f"出售了 {sell_amount} 点情报，获得 ¥{total_gain}（每点 ¥{price_per_intel}）。剩余情报：{self.game_state['intel']}。"
 
     # ---- 组织等级系统 ----
 
@@ -1481,16 +1529,28 @@ class GameEngine:
 
         # 恢复受伤杀手（医疗室加速）
         med_lv = self.game_state["safehouse"].get("medical_room", 0)
+        med_recovery_chance = {0: 0.3, 1: 0.6, 2: 0.8, 3: 1.0}
+        recovery_chance = med_recovery_chance.get(med_lv, 0.3)
         for h in self.game_state["hitmen"]:
             if h["status"] == "injured":
-                if med_lv > 0:
-                    h["status"] = "idle"  # 有医疗室直接恢复
-                else:
-                    if random.random() < 0.5:
-                        h["status"] = "idle"
+                if random.random() < recovery_chance:
+                    h["status"] = "idle"
+
+        # 情报系统：空闲杀手自动产生情报
+        idle_count = len([h for h in self.game_state["hitmen"] if h["status"] == "idle"])
+        intel_per_idle = 1 + self.game_state.get("intel_level", 1)
+        intel_room_lv = self.game_state["safehouse"].get("intel_room", 0)
+        intel_bonus = intel_room_lv  # 情报室每级额外+1情报/人
+        intel_gained = idle_count * (intel_per_idle + intel_bonus)
+        if intel_gained > 0:
+            self.game_state["intel"] = self.game_state.get("intel", 0) + intel_gained
 
         # 刷新契约板
         self.game_state["contracts"] = self._generate_contracts(3)
+
+        # 更新intel_level（情报室提供额外加成）
+        intel_room_lv = self.game_state["safehouse"].get("intel_room", 0)
+        self.game_state["intel_level"] = 1 + (self.game_state["org_level"] // 2) + intel_room_lv
 
         # 杀手自主活动
         activity_events = self._daily_hitman_activities()
@@ -1541,6 +1601,11 @@ class GameEngine:
         self.game_state["ap"] = self.game_state["max_ap"]
         self.game_state["day"] += 1
 
+        # 情报叙事
+        intel_narrative = ""
+        if intel_gained > 0:
+            intel_narrative = f"\n\n📡 情报收集：空闲杀手产出 {intel_gained} 点情报（当前共 {self.game_state['intel']} 点）。"
+
         # 生成叙事
         context = (
             f"第{old_day}天结束。{salary_narrative} "
@@ -1557,6 +1622,9 @@ class GameEngine:
 
         if activity_events:
             narrative += activity_narrative
+
+        if intel_narrative:
+            narrative += intel_narrative
 
         if rival_events:
             narrative += rival_narrative
@@ -1686,16 +1754,17 @@ class GameEngine:
         if not hitmen:
             return [], "没有空闲的杀手可以训练。"
 
-        # 训练场加成
-        training_bonus = self.game_state["safehouse"].get("training_ground", 0) * 0.5
+        # 训练场加成：战力+1变成+1+level
+        training_lv = self.game_state["safehouse"].get("training_ground", 0)
 
         options = []
         for t in TRAINING_OPTIONS:
             opt = dict(t)
-            if training_bonus > 0:
+            if training_lv > 0:
                 attr, amount = opt["effect"]
-                opt["effect"] = (attr, int(amount * (1 + training_bonus)))
-                opt["desc"] = opt["desc"].replace(f"+{amount}", f"+{int(amount*(1+training_bonus))}")
+                if attr == "skill":
+                    opt["effect"] = (attr, amount + training_lv)
+                    opt["desc"] = opt["desc"].replace(f"+{amount}", f"+{amount+training_lv}")
                 opt["has_bonus"] = True
             else:
                 opt["has_bonus"] = False
@@ -1726,14 +1795,14 @@ class GameEngine:
         if self.game_state["ap"] < training["ap"]:
             return "行动力不够完成这项训练。"
 
-        # 训练场加成
-        training_bonus = self.game_state["safehouse"].get("training_ground", 0) * 0.5
+        # 训练场加成：+1+level
+        training_lv = self.game_state["safehouse"].get("training_ground", 0)
 
         self._modify_state("funds", -training["cost"])
         self._modify_state("ap", -training["ap"])
         attr, amount = training["effect"]
-        if training_bonus > 0:
-            amount = int(amount * (1 + training_bonus))
+        if attr == "skill" and training_lv > 0:
+            amount = amount + training_lv
         if attr == "skill":
             hitman["skill"] = min(10, hitman["skill"] + amount)
         elif attr == "loyalty":
@@ -1742,7 +1811,7 @@ class GameEngine:
         hitman["exp"] += exp_gain
         self._check_level_up(hitman)
 
-        bonus_text = f"（训练场加成 +{int(training_bonus*100)}%）" if training_bonus > 0 else ""
+        bonus_text = f"（训练场加成 +{training_lv}）" if training_lv > 0 else ""
         return f"{hitman['name']} 完成了{training['name']}，{attr} +{amount}，经验 +{exp_gain}。{bonus_text}"
 
     def _check_level_up(self, hitman):
