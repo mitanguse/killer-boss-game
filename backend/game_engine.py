@@ -308,7 +308,7 @@ class GameEngine:
                 "specialty": h["specialty"],
                 "skill": h["skill"],
                 "loyalty": h["loyalty"],
-                "salary": h["salary"],
+                "cut": h["cut"],
                 "recruitment_cost": recruitment_cost,
             })
         return candidates

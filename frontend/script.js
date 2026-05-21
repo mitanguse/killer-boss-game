@@ -213,7 +213,7 @@ function renderHitmen(hitmen) {
             <div class="details">
                 <span>⚔️ Lv.${lv}</span>
                 <span>💪 ${h.skill}</span>
-                <span>💰 ${formatMoney(h.salary)}/月</span>
+                <span>📊 ${Math.round((h.cut||0.2)*100)}%抽</span>
             </div>
             <div class="details" style="font-size:10px;color:#888;">
                 ${weaponName ? '🔫 '+weaponName : ''}
@@ -240,6 +240,7 @@ function updateButtons(state) {
     dom.btnRecruit.disabled = !gameStarted || state.game_over || !apOk;
     dom.btnContracts.disabled = !gameStarted || state.game_over;
     dom.btnWeaponShop.disabled = !gameStarted || state.game_over;
+    dom.btnLeaderboard.disabled = !gameStarted;
     dom.btnTraining.disabled = !gameStarted || state.game_over || !apOk || state.hitmen.length === 0;
     dom.btnRivals.disabled = !gameStarted || state.game_over;
     dom.btnEndDay.disabled = !gameStarted || state.game_over;
@@ -454,7 +455,7 @@ async function handleRecruit() {
                 <div class="cand-stats">
                     <span>⚔️ 战力 ${c.skill}/5</span>
                     <span>❤️ 忠诚 ${c.loyalty}/10</span>
-                    <span>💰 月薪 ${formatMoney(c.salary)}</span>
+                    <span>📊 抽成 ${Math.round((c.cut||0.2)*100)}%</span>
                 </div>
                 <div class="cand-cost">
                     💸 招募费：${formatMoney(c.recruitment_cost)}
@@ -681,6 +682,35 @@ async function handleReset() {
     setLoading(false);
 }
 
+async function handleLeaderboard() {
+    const data = await apiCall('leaderboard');
+    if (!data) return;
+    const ranking = data.extra?.ranking || [];
+    if (!ranking.length) {
+        showModal('🏆 排行榜', '<p style="color:#888;">暂无杀手数据</p>');
+        return;
+    }
+    let html = '<div style="max-height:400px;overflow-y:auto;">';
+    html += '<div style="display:grid;grid-template-columns:36px 1fr 44px 44px 44px;gap:4px;font-size:11px;color:#888;padding:4px 0;border-bottom:1px solid #333;">';
+    html += '<span>#</span><span>杀手</span><span style="text-align:right">战力</span><span style="text-align:right">等级</span><span style="text-align:right">任务</span>';
+    html += '</div>';
+    ranking.forEach((h, i) => {
+        const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : '';
+        const rankColor = i === 0 ? '#d4a017' : i === 1 ? '#94a3b8' : i === 2 ? '#cd7f32' : '#888';
+        const specEmoji = {'潜入':'🕵️','狙击':'🎯','近战':'⚔️','爆破':'💥','黑客':'💻'};
+        html += '<div style="display:grid;grid-template-columns:36px 1fr 44px 44px 44px;gap:4px;align-items:center;padding:6px 0;border-bottom:1px solid #1a1a1a;">';
+        html += '<span style="font-weight:700;color:' + rankColor + ';">' + (medal || (i + 1)) + '</span>';
+        html += '<span>' + (specEmoji[h.specialty] || '🗡️') + ' ' + h.name + '<br><span style="font-size:10px;color:#666;">' + h.specialty + '</span></span>';
+        html += '<span style="text-align:right;color:#60a5fa;">' + h.power + '</span>';
+        html += '<span style="text-align:right;color:#a78bfa;">Lv.' + h.lv + '</span>';
+        html += '<span style="text-align:right;color:#fbbf24;">' + h.missions + '</span>';
+        html += '</div>';
+    });
+    html += '<div style="margin-top:8px;font-size:10px;color:#555;">评分 = 战力 + 武器加成 + 等级×0.5</div>';
+    html += '</div>';
+    showModal('🏆 杀手排行榜', html);
+}
+
 function disableGameButtons() {
     dom.btnRecruit.disabled = true;
     dom.btnContracts.disabled = true;
@@ -728,7 +758,7 @@ function showHitmanDetail(hitman, cardEl) {
         <div class="hd-row"><span>战力</span><span class="hd-val">⚔️ ${hitman.skill}/10</span></div>
         <div class="hd-row"><span>忠诚</span><span class="hd-val">❤️ ${hitman.loyalty}/10</span></div>
         <div class="hd-row"><span>状态</span><span class="hd-val">${statusText(hitman.status)}</span></div>
-        <div class="hd-row"><span>月薪</span><span class="hd-val">💰 ${formatMoney(hitman.salary)}</span></div>
+        <div class="hd-row"><span>抽成</span><span class="hd-val">📊 ${Math.round((hitman.cut||0.2)*100)}%（战力越高抽成越多）</span></div>
         <div class="hd-row"><span>经验</span><span class="hd-val">${exp}/${needExp}</span></div>
         <div class="hd-row"><span>任务完成</span><span class="hd-val">${hitman.missions_completed || 0} 次</span></div>
         <div class="hd-row"><span>武器</span><span class="hd-val">${weapon ? '🔫 ' + weapon.name + '(' + weapon.rarity + ' +' + weapon.bonus + ')' : '无'}</span></div>
@@ -780,6 +810,7 @@ dom.btnRestart.addEventListener('click', handleRestart);
 dom.btnRivals.addEventListener('click', handleRivals);
 dom.btnWeaponShop.addEventListener('click', handleWeaponShop);
 dom.btnTraining.addEventListener('click', handleTraining);
+dom.btnLeaderboard.addEventListener('click', handleLeaderboard);
 dom.resetLink.addEventListener('click', handleReset);
 
 // ============================================================
