@@ -541,7 +541,8 @@ class GameEngine:
         if contract.get("taken"):
             return "这个契约已经被执行了。", False
 
-        # 找杀手in self.game_state["hitmen"]:
+        # 找杀手
+        for h in self.game_state["hitmen"]:
             if h["id"] == hitman_id and h["status"] == "idle":
                 hitman = h
                 break
